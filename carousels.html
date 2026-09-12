@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tu vidriera digital | Carruseles para Instagram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root{
+    --navy:#152242; --navy2:#1F3563; --navy-soft:#4A5A82;
+    --orange:#FF6B3D; --orange-deep:#E8531F; --orange-soft:#FFE3D2;
+    --cream:#FFF9F2; --sand:#F3EADC; --paper:#FFFFFF;
+    --ink:#1C2333; --muted:#5E6579;
+    --green:#2F9E63; --red:#D64545; --wsp:#25D366;
+    --mya-50:#FAF6F1; --mya-100:#F3E8DA; --mya-200:#E6D3BC; --mya-300:#D5B899;
+    --mya-500:#A67C52; --mya-600:#8C6239; --mya-700:#6E4B28; --mya-900:#3A2511;
+    --mya-bg:#FAF7F2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:#E7E9EF; color:var(--ink);
+    font-family:'Inter',sans-serif;
+    padding:56px 0 140px;
+  }
+  .intro{max-width:920px;margin:0 auto 64px;padding:0 28px;text-align:center;}
+  .intro .tag{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;font-family:'Baloo 2';font-weight:600;font-size:14px;padding:8px 18px;border-radius:999px;margin-bottom:18px;}
+  .intro h1{font-family:'Baloo 2';font-weight:800;font-size:34px;color:var(--navy);margin:0 0 12px;}
+  .intro p{color:var(--muted);font-size:15.5px;line-height:1.7;margin:0 auto;max-width:640px;}
+  .intro .howto{margin-top:22px;background:#fff;border:1px solid #DDE1EA;border-radius:16px;padding:16px 22px;font-size:14px;color:var(--navy2);text-align:left;max-width:640px;margin-left:auto;margin-right:auto;}
+  .intro .howto b{color:var(--orange-deep);}
+
+  .block{margin-bottom:96px;}
+  .block-head{max-width:1120px;margin:0 auto 22px;padding:0 40px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .block-head h2{font-family:'Baloo 2';font-weight:700;font-size:26px;color:var(--navy);margin:0 0 4px;}
+  .block-head p{margin:0;font-size:14.5px;color:var(--muted);}
+  .block-head .count{font-family:'Baloo 2';font-weight:600;font-size:13px;color:#fff;background:var(--orange);padding:6px 14px;border-radius:999px;white-space:nowrap;}
+
+  .carousel{display:flex;gap:34px;overflow-x:auto;padding:12px 40px 34px;scroll-snap-type:x mandatory;}
+  .carousel::-webkit-scrollbar{height:10px;}
+  .carousel::-webkit-scrollbar-track{background:transparent;}
+  .carousel::-webkit-scrollbar-thumb{background:#C7CCD8;border-radius:10px;}
+
+  .slide{
+    scroll-snap-align:start; flex:0 0 auto;
+    width:1080px; height:1350px;
+    background:var(--cream);
+    border-radius:36px;
+    position:relative; overflow:hidden;
+    box-shadow:0 40px 80px -20px rgba(15,20,45,.35);
+    display:flex; flex-direction:column;
+  }
+  .slide-pad{padding:72px 76px 60px; height:100%; display:flex; flex-direction:column;}
+
+  .brandrow{display:flex; align-items:center; gap:16px;}
+  .logo-mark{width:60px;height:60px;border-radius:50%;border:3px solid var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;background:#fff;}
+  .logo-mark i{font-size:24px;color:var(--navy);}
+  .logo-mark .sun{position:absolute;top:-7px;right:-2px;width:16px;height:16px;background:var(--orange);border-radius:50%;}
+  .brand-name{font-family:'Baloo 2';font-weight:700;font-size:26px;color:var(--navy);line-height:1.1;}
+  .brand-name small{display:block;font-family:'Inter';font-weight:500;font-size:15px;color:var(--muted);margin-top:2px;}
+  .slidenum{margin-left:auto;font-family:'Inter';font-weight:700;font-size:20px;color:var(--navy);opacity:.35;}
+
+  .headline{font-family:'Baloo 2';font-weight:700;color:var(--navy);line-height:1.08;letter-spacing:-.5px;}
+  .headline .accent{color:var(--orange-deep);}
+  .sub{font-family:'Inter';font-weight:500;color:var(--muted);line-height:1.55;}
+
+  .dots{display:flex;gap:9px;position:absolute;bottom:40px;left:76px;}
+  .dots span{width:9px;height:9px;border-radius:50%;background:#D9C9BB;}
+  .dots span.on{background:var(--orange);width:26px;border-radius:6px;}
+
+  .swipe{position:absolute;bottom:36px;right:76px;display:flex;align-items:center;gap:10px;font-family:'Baloo 2';font-weight:600;font-size:19px;color:var(--navy);opacity:.55;}
+
+  /* ---------- phone mockup ---------- */
+  .phone-wrap{display:flex;align-items:center;justify-content:center;flex:1;min-height:0;}
+  .phone{
+    width:500px; background:#fff; border:14px solid var(--navy);
+    border-radius:52px; box-shadow:0 30px 60px -12px rgba(20,25,55,.35);
+    overflow:hidden; position:relative;
+  }
+  .phone-notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:150px; height:24px; background:var(--navy); border-radius:0 0 18px 18px; z-index:5;}
+  .phone-screen{background:var(--mya-bg); font-family:'Poppins',sans-serif; padding-top:34px; padding-bottom:22px;}
+
+  /* mini components emulating Blanquería MyA UI, in her real palette */
+  .mya-topbar{display:flex;align-items:center;gap:10px;padding:0 22px 14px;}
+  .mya-circle{width:34px;height:34px;border-radius:50%;background:var(--mya-100);color:var(--mya-700);font-family:'Playfair Display';font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;}
+  .mya-brand{font-family:'Playfair Display';font-weight:700;font-size:15px;color:var(--mya-700);}
+  .mya-bag{margin-left:auto;width:30px;height:30px;border-radius:50%;background:var(--mya-500);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .mya-hero{background:linear-gradient(180deg,var(--mya-100),var(--mya-bg));padding:26px 24px 22px;text-align:center;}
+  .mya-hero .kicker{display:inline-block;background:#fff;border:1px solid var(--mya-200);color:var(--mya-700);font-size:10.5px;font-weight:600;padding:5px 12px;border-radius:999px;margin-bottom:10px;}
+  .mya-hero h3{font-family:'Playfair Display';font-weight:700;color:var(--mya-900);font-size:21px;line-height:1.25;margin:0 0 10px;}
+  .mya-search{background:#fff;border:1px solid var(--mya-200);border-radius:999px;padding:11px 16px;font-size:11.5px;color:#8a7c6d;display:flex;align-items:center;gap:8px;}
+  .mya-pills{display:flex;gap:8px;padding:16px 22px 6px;overflow:hidden;}
+  .mya-pill{font-size:11px;font-weight:600;padding:7px 14px;border-radius:999px;background:#fff;border:1px solid var(--mya-200);color:var(--mya-700);white-space:nowrap;}
+  .mya-pill.on{background:var(--mya-500);color:#fff;border-color:var(--mya-500);}
+  .mya-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 22px 6px;}
+  .mya-card{background:#fff;border-radius:16px;border:1px solid #EEE3D6;overflow:hidden;}
+  .mya-card .img{height:78px;background:linear-gradient(135deg,var(--mya-200),var(--mya-300));}
+  .mya-card .body{padding:9px 10px;}
+  .mya-card .name{font-size:11.5px;font-weight:600;color:var(--mya-900);margin-bottom:3px;}
+  .mya-card .price{font-size:12.5px;font-weight:700;color:var(--mya-700);}
+  .mya-panel{margin:14px 22px 0;background:#fff;border-radius:18px;border:1px solid #EEE3D6;padding:18px;}
+  .mya-panel h4{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--mya-900);}
+  .mya-swatches{display:flex;gap:9px;margin:8px 0 4px;}
+  .mya-swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--mya-300);}
+  .mya-btn{display:block;text-align:center;background:var(--mya-500);color:#fff;font-weight:700;font-size:12.5px;padding:12px;border-radius:12px;margin-top:12px;}
+  .mya-btn.green{background:#3AAE58;}
+  .mya-row{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;padding:8px 0;border-bottom:1px dashed #E9DECE;color:var(--mya-900);}
+  .mya-total{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;color:var(--mya-700);padding-top:10px;}
+  .mya-chat-bubble{background:var(--mya-500);color:#fff;font-size:11px;border-radius:14px 14px 14px 3px;padding:10px 13px;max-width:82%;margin-bottom:8px;}
+  .mya-chat-bubble.bot{background:#fff;color:var(--mya-900);border:1px solid #EEE3D6;border-radius:14px 14px 3px 14px;margin-left:auto;}
+  .mya-status{font-size:9.5px;font-weight:700;padding:4px 9px;border-radius:999px;}
+  .status-recibido{background:#FEF3C7;color:#92660A;}
+  .status-proceso{background:#DBEAFE;color:#1D4ED8;}
+  .status-entregado{background:#D1FAE5;color:#047857;}
+  .stat-card{background:linear-gradient(135deg,var(--mya-500),var(--mya-300));border-radius:14px;padding:12px 14px;color:#fff;}
+  .stat-card .lbl{font-size:9px;text-transform:none;opacity:.85;}
+  .stat-card .val{font-family:'Playfair Display';font-weight:700;font-size:19px;}
+
+  /* generic content blocks */
+  .icon-list{display:flex;flex-direction:column;gap:22px;}
+  .icon-row{display:flex;align-items:flex-start;gap:20px;}
+  .icon-row .ic{width:56px;height:56px;border-radius:16px;background:var(--orange-soft);color:var(--orange-deep);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+  .icon-row h4{margin:0 0 4px;font-family:'Baloo 2';font-size:24px;color:var(--navy);}
+  .icon-row p{margin:0;font-size:19px;color:var(--muted);line-height:1.5;}
+
+  .price-tag{display:inline-flex;flex-direction:column;align-items:center;background:var(--navy);color:#fff;border-radius:26px;padding:26px 44px;}
+  .price-tag .lbl{font-family:'Baloo 2';font-size:20px;color:var(--orange);font-weight:700;}
+  .price-tag .val{font-family:'Baloo 2';font-size:56px;font-weight:800;}
+  .price-tag .val small{font-size:22px;font-weight:600;color:#B9C2DA;}
+
+  .badge-free{display:inline-flex;align-items:center;gap:10px;background:var(--orange);color:#fff;font-family:'Baloo 2';font-weight:700;font-size:24px;padding:12px 26px;border-radius:999px;}
+
+  .check-item{display:flex;align-items:center;gap:16px;font-size:22px;font-weight:600;color:var(--navy);padding:14px 0;border-bottom:1px solid #EADFCF;}
+  .check-item i{color:var(--green);font-size:24px;}
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:24px;flex:1;}
+  .compare .col{border-radius:24px;padding:32px 28px;}
+  .compare .no{background:#FBEAEA;border:2px solid #F3C9C9;}
+  .compare .yes{background:#E9F7EE;border:2px solid #BFE7CC;}
+  .compare h4{font-family:'Baloo 2';font-size:26px;margin:0 0 18px;display:flex;align-items:center;gap:10px;}
+  .compare .no h4{color:var(--red);}
+  .compare .yes h4{color:var(--green);}
+  .compare li{list-style:none;font-size:19px;margin-bottom:14px;display:flex;gap:10px;line-height:1.4;color:var(--navy);}
+  .compare li i{margin-top:3px;flex-shrink:0;}
+
+  .steps{display:flex;flex-direction:column;gap:20px;}
+  .step{display:flex;gap:22px;align-items:flex-start;}
+  .step .num{font-family:'Baloo 2';font-weight:800;font-size:30px;color:#fff;background:var(--navy);width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .step h4{margin:0 0 4px;font-family:'Baloo 2';font-size:23px;color:var(--navy);}
+  .step p{margin:0;font-size:18px;color:var(--muted);}
+
+  .contact-row{display:flex;gap:16px;margin-top:6px;}
+  .contact-pill{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--navy);color:var(--navy);font-family:'Baloo 2';font-weight:700;font-size:19px;padding:14px 24px;border-radius:999px;}
+  .contact-pill i{font-size:20px;}
+  .contact-pill.wsp{background:var(--wsp);border-color:var(--wsp);color:#fff;}
+
+  .float-btns{position:absolute; right:16px; bottom:70px; display:flex; flex-direction:column; gap:10px;}
+  .float-btns .fb{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 6px 14px rgba(0,0,0,.2);}
+  .fb-wsp{background:#25D366;}
+  .fb-ig{background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);}
+
+  .kbd-eyebrowless{font-family:'Baloo 2';font-weight:700;font-size:30px;color:var(--navy);}
+
+  @media (max-width:1200px){
+    .block-head, .carousel{padding-left:20px;padding-right:20px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <span class="tag"><i class="fa-solid fa-store"></i> tu vidriera digital</span>
+  <h1>5 carruseles listos para Instagram</h1>
+  <p>Usan como ejemplo real la página de <b>Blanquería MyA</b>, uno de tus proyectos, para mostrar herramientas y beneficios concretos de tener una vidriera digital propia.</p>
+  <div class="howto">
+    Cada tarjeta mide <b>1080 × 1350 px</b> (formato vertical de Instagram). Recorré cada carrusel, capturá o exportá cada tarjeta en orden y subilas como carrusel en una sola publicación. El pie con puntitos te muestra el orden dentro de cada carrusel.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CARRUSEL 1 -->
+<!-- ============================================================ -->
+<div class="block">
+  <div class="block-head">
+    <div>
+      <h2>Carrusel 1 · El gancho</h2>
+      <p>Presentación general: tu negocio abierto las 24 horas, con la web de Blanquería MyA como ejemplo.</p>
+    </div>
+    <span class="count">5 tarjetas</span>
+  </div>
+  <div class="carousel">
+
+    <!-- 1.1 Cover -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+        </div>
+        <div style="height:34px;"></div>
+        <div class="headline" style="font-size:70px;max-width:820px;">¿Tu negocio ya tiene su <span class="accent">vidriera digital?</span></div>
+        <div style="height:18px;"></div>
+        <div class="sub" style="font-size:26px;max-width:700px;">Así se ve una página web hecha a medida — con el ejemplo real de Blanquería MyA.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Blanquería MyA</div><div class="mya-bag"><i class="fa-solid fa-bag-shopping"></i></div></div>
+              <div class="mya-hero">
+                <span class="kicker">✨ Colección Blancos y Confort</span>
+                <h3>Vestí tu hogar con la dulzura que merecés</h3>
+                <div class="mya-search"><i class="fa-solid fa-magnifying-glass"></i> Buscar sábanas, acolchados...</div>
+              </div>
+              <div class="mya-pills">
+                <span class="mya-pill on">Todos</span><span class="mya-pill">Sábanas</span><span class="mya-pill">Toallas</span><span class="mya-pill">Acolchados</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div>
+        <div class="swipe">Deslizá <i class="fa-solid fa-arrow-right"></i></div>
+      </div>
+    </div>
+
+    <!-- 1.2 Catalog -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">2/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Mientras vos dormís, <span class="accent">tu catálogo sigue mostrando</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Fotos, precios y categorías, siempre ordenados y actualizados.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Blanquería MyA</div><div class="mya-bag"><i class="fa-solid fa-bag-shopping"></i></div></div>
+              <div class="mya-pills"><span class="mya-pill on">Todos</span><span class="mya-pill">Sábanas</span><span class="mya-pill">Toallas</span></div>
+              <div class="mya-grid">
+                <div class="mya-card"><div class="img"></div><div class="body"><div class="name">Sábanas 600 hilos</div><div class="price">$45.000</div></div></div>
+                <div class="mya-card"><div class="img"></div><div class="body"><div class="name">Acolchado Fluff</div><div class="price">$62.500</div></div></div>
+                <div class="mya-card"><div class="img"></div><div class="body"><div class="name">Toallón Premium</div><div class="price">$18.900</div></div></div>
+                <div class="mya-card"><div class="img"></div><div class="body"><div class="name">Cubrecama Queen</div><div class="price">$71.000</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 1.3 Product detail -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">3/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Cada producto, <span class="accent">con toda la info</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Medidas, colores y precio: el cliente elige exactamente lo que quiere, sin escribirte para preguntar.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Blanquería MyA</div></div>
+              <div style="padding:0 22px;"><div class="img" style="height:110px;border-radius:16px;background:linear-gradient(135deg,var(--mya-200),var(--mya-300));"></div></div>
+              <div class="mya-panel">
+                <h4>1. Elegí la medida</h4>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <span class="mya-pill">1 plaza</span><span class="mya-pill on">2 plazas</span><span class="mya-pill">Queen</span>
+                </div>
+                <h4 style="margin-top:14px;">2. Precio</h4>
+                <div style="font-family:'Playfair Display';font-weight:700;color:var(--mya-700);font-size:20px;">$45.000</div>
+                <h4 style="margin-top:14px;">3. Elegí el color</h4>
+                <div class="mya-swatches">
+                  <div class="mya-swatch" style="background:#D9C2A6;"></div>
+                  <div class="mya-swatch" style="background:#8C6239;"></div>
+                  <div class="mya-swatch" style="background:#E8E1D6;"></div>
+                </div>
+                <span class="mya-btn">+ Agregar al carrito</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 1.4 Whatsapp order -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">4/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">El pedido llega <span class="accent">directo a tu WhatsApp</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Sin apps raras, sin comisión por venta: el mensaje llega armado, con productos y total.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Tu carrito</div></div>
+              <div class="mya-panel">
+                <div class="mya-row"><span>2x Sábanas 600 hilos</span><span>$90.000</span></div>
+                <div class="mya-row"><span>1x Toallón Premium</span><span>$18.900</span></div>
+                <div class="mya-total"><span>Total</span><span>$108.900</span></div>
+                <span class="mya-btn green"><i class="fa-brands fa-whatsapp"></i>&nbsp; Confirmar pedido por WhatsApp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 1.5 CTA -->
+    <div class="slide" style="background:var(--navy);">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark" style="background:#fff;"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name" style="color:#fff;">tu vidriera digital</div>
+          <div class="slidenum" style="color:#fff;">5/5</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:26px;">
+          <div class="badge-free"><i class="fa-solid fa-gift"></i> Primer mes GRATIS</div>
+          <div class="headline" style="color:#fff;font-size:60px;max-width:820px;">Tu vidriera digital, lista para vender</div>
+          <div class="sub" style="color:#C7CEE0;font-size:26px;max-width:680px;">Después del primer mes, tu página funciona por un valor fijo de</div>
+          <div class="price-tag"><span class="lbl">Suscripción mensual</span><span class="val">$25.000<small>/mes</small></span></div>
+          <div class="contact-row">
+            <div class="contact-pill wsp"><i class="fa-brands fa-whatsapp"></i> Escribinos</div>
+            <div class="contact-pill"><i class="fa-brands fa-instagram"></i> @tu_vidrieradigital</div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CARRUSEL 2 -->
+<!-- ============================================================ -->
+<div class="block">
+  <div class="block-head">
+    <div>
+      <h2>Carrusel 2 · Herramientas para quien compra</h2>
+      <p>Filtros, cotizador y botón de compartir: todo lo que hace más fácil comprarte.</p>
+    </div>
+    <span class="count">5 tarjetas</span>
+  </div>
+  <div class="carousel">
+
+    <!-- 2.1 Cover -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+        </div>
+        <div style="height:40px;"></div>
+        <div class="headline" style="font-size:64px;max-width:800px;">Todo lo que puede hacer <span class="accent">tu catálogo online</span></div>
+        <div style="height:16px;"></div>
+        <div class="sub" style="font-size:26px;max-width:680px;">Herramientas pensadas para que comprarte sea simple, con el ejemplo de Blanquería MyA.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Blanquería MyA</div></div>
+              <div class="mya-hero" style="padding-top:14px;">
+                <div class="mya-search"><i class="fa-solid fa-magnifying-glass"></i> Buscar por producto...</div>
+              </div>
+              <div class="mya-pills"><span class="mya-pill on">Todas</span><span class="mya-pill">1 plaza</span><span class="mya-pill">2 plazas</span><span class="mya-pill">Queen</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 2.2 filters -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">2/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Búsqueda y filtros <span class="accent">por categoría y medida</span></div>
+        <div style="height:20px;"></div>
+        <div class="icon-list">
+          <div class="icon-row"><div class="ic"><i class="fa-solid fa-magnifying-glass"></i></div><div><h4>Buscador instantáneo</h4><p>Encuentra un producto por nombre en segundos, sin recorrer todo el catálogo.</p></div></div>
+          <div class="icon-row"><div class="ic"><i class="fa-solid fa-layer-group"></i></div><div><h4>Categorías claras</h4><p>Sábanas, toallas, acolchados: cada cosa en su lugar.</p></div></div>
+          <div class="icon-row"><div class="ic"><i class="fa-solid fa-ruler"></i></div><div><h4>Filtro por medida</h4><p>1 plaza, 2 plazas, Queen o King: solo ve lo que le sirve.</p></div></div>
+        </div>
+        <div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 2.3 cotizador -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">3/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Un <span class="accent">cotizador rápido</span> para presupuestos grandes</div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">El cliente arma su lista, ve el total estimado y te lo manda para confirmar.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">🧮 Cotizador rápido</div></div>
+              <div class="mya-panel">
+                <div class="mya-row"><span>2x Sábanas Queen</span><span>$90.000</span></div>
+                <div class="mya-row"><span>3x Toallón Premium</span><span>$56.700</span></div>
+                <div class="mya-row"><span>1x Acolchado Fluff</span><span>$62.500</span></div>
+                <div class="mya-total"><span>Total estimado</span><span>$209.200</span></div>
+                <span class="mya-btn green"><i class="fa-brands fa-whatsapp"></i>&nbsp; Consultar por WhatsApp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 2.4 share -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">4/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Compartir un producto, <span class="accent">en un toque</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Tus clientes recomiendan tu catálogo a sus amigos sin esfuerzo, con el producto y precio ya armados.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Blanquería MyA</div></div>
+              <div style="padding:0 22px;"><div class="img" style="height:110px;border-radius:16px;background:linear-gradient(135deg,var(--mya-200),var(--mya-300));"></div></div>
+              <div class="mya-panel">
+                <h4>Sábanas 600 hilos</h4>
+                <div style="font-family:'Playfair Display';font-weight:700;color:var(--mya-700);font-size:20px;margin-bottom:10px;">Desde $45.000</div>
+                <span class="mya-btn green"><i class="fa-brands fa-whatsapp"></i>&nbsp; Compartir por WhatsApp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 2.5 CTA -->
+    <div class="slide" style="background:var(--navy);">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark" style="background:#fff;"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name" style="color:#fff;">tu vidriera digital</div>
+          <div class="slidenum" style="color:#fff;">5/5</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:26px;">
+          <div class="badge-free"><i class="fa-solid fa-gift"></i> Primer mes GRATIS</div>
+          <div class="headline" style="color:#fff;font-size:56px;max-width:820px;">Herramientas que ya funcionan, listas para tu marca</div>
+          <div class="price-tag"><span class="lbl">Después, solo</span><span class="val">$25.000<small>/mes</small></span></div>
+          <div class="contact-row">
+            <div class="contact-pill wsp"><i class="fa-brands fa-whatsapp"></i> Escribinos</div>
+            <div class="contact-pill"><i class="fa-brands fa-instagram"></i> @tu_vidrieradigital</div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CARRUSEL 3 -->
+<!-- ============================================================ -->
+<div class="block">
+  <div class="block-head">
+    <div>
+      <h2>Carrusel 3 · El panel que maneja tu negocio</h2>
+      <p>Productos, precios, pedidos y estadísticas: todo lo que ve el dueño del negocio.</p>
+    </div>
+    <span class="count">5 tarjetas</span>
+  </div>
+  <div class="carousel">
+
+    <!-- 3.1 Cover -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+        </div>
+        <div style="height:40px;"></div>
+        <div class="headline" style="font-size:60px;max-width:820px;">Vos manejás el negocio, <span class="accent">nosotros la tecnología</span></div>
+        <div style="height:16px;"></div>
+        <div class="sub" style="font-size:26px;max-width:680px;">Un panel de administración simple para cargar, cobrar y controlar todo.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle" style="background:var(--mya-700);color:#fff;"><i class="fa-solid fa-lock"></i></div><div class="mya-brand">Panel de administración</div></div>
+              <div style="padding:0 22px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="stat-card"><div class="lbl">Ventas del mes</div><div class="val">$820.000</div></div>
+                <div class="stat-card" style="background:linear-gradient(135deg,#3AAE58,#8FD6A6);"><div class="lbl">Cobrado</div><div class="val">$610.000</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 3.2 cargar productos + aumento -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">2/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:50px;">Cargá productos y <span class="accent">actualizá precios en minutos</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Sin depender de nadie: subís fotos, precios y medidas cuando quieras.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle" style="background:var(--mya-700);color:#fff;"><i class="fa-solid fa-lock"></i></div><div class="mya-brand">Nuevo producto</div></div>
+              <div class="mya-panel">
+                <h4>Nombre del producto</h4>
+                <div style="background:var(--mya-50);border:1px solid var(--mya-200);border-radius:10px;padding:9px 12px;font-size:11px;color:#8a7c6d;margin-bottom:10px;">Sábanas percal 600 hilos</div>
+                <h4>💲 Aumento masivo</h4>
+                <div style="display:flex;gap:8px;">
+                  <div style="flex:1;background:var(--mya-50);border:1px solid var(--mya-200);border-radius:10px;padding:9px 10px;font-size:11px;color:#8a7c6d;">% Aumento</div>
+                  <div style="flex:1;background:var(--mya-50);border:1px solid var(--mya-200);border-radius:10px;padding:9px 10px;font-size:11px;color:#8a7c6d;">Redondeo</div>
+                </div>
+                <span class="mya-btn" style="background:#7C5CBF;">Aplicar cambio general</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 3.3 pedidos y pagos -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">3/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Pedidos y pagos, <span class="accent">todo organizado</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Sabés qué se pidió, quién debe y cuánto ya te pagaron, sin planillas sueltas.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle" style="background:var(--mya-700);color:#fff;"><i class="fa-solid fa-lock"></i></div><div class="mya-brand">Pedidos</div></div>
+              <div class="mya-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <span style="font-size:12px;font-weight:700;color:var(--mya-900);">Marina G.</span>
+                  <span class="mya-status status-recibido">Recibido</span>
+                </div>
+                <div style="font-size:11px;color:#8a7c6d;margin-bottom:10px;">2x Sábanas · 1x Toallón — $108.900</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <span style="font-size:12px;font-weight:700;color:var(--mya-900);">Carlos R.</span>
+                  <span class="mya-status status-proceso">En proceso</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;font-weight:700;color:var(--mya-900);">Julia P.</span>
+                  <span class="mya-status status-entregado">Entregado ✓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 3.4 tablero -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">4/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Tablero con <span class="accent">ventas y lo más vendido</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Un vistazo rápido de cómo va el mes y qué productos elige más la gente.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle" style="background:var(--mya-700);color:#fff;"><i class="fa-solid fa-lock"></i></div><div class="mya-brand">📊 Tablero</div></div>
+              <div style="padding:0 22px;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div class="stat-card"><div class="lbl">Ventas del mes</div><div class="val">$820.000</div></div>
+                <div class="stat-card" style="background:linear-gradient(135deg,#E29A0D,#F5B21C);"><div class="lbl">Pendiente</div><div class="val">$92.000</div></div>
+              </div>
+              <div class="mya-panel">
+                <h4>🏆 Lo más vendido</h4>
+                <div style="font-size:11px;color:var(--mya-900);margin-bottom:4px;">Sábanas 600 hilos</div>
+                <div style="height:7px;background:#EEE3D6;border-radius:6px;margin-bottom:9px;"><div style="width:88%;height:100%;background:var(--mya-500);border-radius:6px;"></div></div>
+                <div style="font-size:11px;color:var(--mya-900);margin-bottom:4px;">Toallón Premium</div>
+                <div style="height:7px;background:#EEE3D6;border-radius:6px;"><div style="width:56%;height:100%;background:var(--mya-500);border-radius:6px;"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 3.5 CTA -->
+    <div class="slide" style="background:var(--navy);">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark" style="background:#fff;"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name" style="color:#fff;">tu vidriera digital</div>
+          <div class="slidenum" style="color:#fff;">5/5</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:26px;">
+          <div class="badge-free"><i class="fa-solid fa-gift"></i> Primer mes GRATIS</div>
+          <div class="headline" style="color:#fff;font-size:56px;max-width:820px;">Tu propio panel, sin depender de nadie</div>
+          <div class="price-tag"><span class="lbl">Después, solo</span><span class="val">$25.000<small>/mes</small></span></div>
+          <div class="contact-row">
+            <div class="contact-pill wsp"><i class="fa-brands fa-whatsapp"></i> Escribinos</div>
+            <div class="contact-pill"><i class="fa-brands fa-instagram"></i> @tu_vidrieradigital</div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CARRUSEL 4 -->
+<!-- ============================================================ -->
+<div class="block">
+  <div class="block-head">
+    <div>
+      <h2>Carrusel 4 · Atención que no duerme</h2>
+      <p>Chatbot, contacto directo y una marca que se adapta a cualquier rubro.</p>
+    </div>
+    <span class="count">5 tarjetas</span>
+  </div>
+  <div class="carousel">
+
+    <!-- 4.1 Cover -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+        </div>
+        <div style="height:40px;"></div>
+        <div class="headline" style="font-size:64px;max-width:800px;">Atención al cliente <span class="accent">que nunca se toma el día libre</span></div>
+        <div style="height:16px;"></div>
+        <div class="sub" style="font-size:26px;max-width:680px;">Tu página responde preguntas y acompaña al cliente aunque vos estés ocupado.</div>
+        <div class="phone-wrap">
+          <div class="phone" style="position:relative;">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand">Blanquería MyA</div></div>
+              <div class="mya-grid">
+                <div class="mya-card"><div class="img"></div><div class="body"><div class="name">Sábanas 600 hilos</div><div class="price">$45.000</div></div></div>
+                <div class="mya-card"><div class="img"></div><div class="body"><div class="name">Toallón Premium</div><div class="price">$18.900</div></div></div>
+              </div>
+            </div>
+            <div class="float-btns"><div class="fb fb-wsp"><i class="fa-brands fa-whatsapp"></i></div><div class="fb fb-ig"><i class="fa-brands fa-instagram"></i></div></div>
+          </div>
+        </div>
+        <div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 4.2 chatbot -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">2/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Un asistente que <span class="accent">responde las preguntas de siempre</span></div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Envíos, medidas, formas de pago: configurás las respuestas una vez y quedan siempre disponibles.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">🤖</div><div class="mya-brand">Asistente de consultas</div></div>
+              <div class="mya-panel">
+                <div class="mya-chat-bubble">¡Hola! 👋 ¿En qué puedo ayudarte hoy?</div>
+                <div class="mya-chat-bubble bot">¿Hacen envíos?</div>
+                <div class="mya-chat-bubble">¡Sí! Hacemos envíos a todo el país 🚚</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 4.3 contacto + guia medidas -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">3/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:52px;">Contacto directo y <span class="accent">guías que evitan dudas</span></div>
+        <div style="height:20px;"></div>
+        <div class="icon-list">
+          <div class="icon-row"><div class="ic"><i class="fa-brands fa-whatsapp"></i></div><div><h4>Botón de WhatsApp flotante</h4><p>Siempre visible, en cualquier pantalla del catálogo.</p></div></div>
+          <div class="icon-row"><div class="ic"><i class="fa-solid fa-ruler-combined"></i></div><div><h4>Guía de medidas</h4><p>Tablas e imágenes para que elija la talla correcta sin devoluciones.</p></div></div>
+          <div class="icon-row"><div class="ic"><i class="fa-solid fa-location-dot"></i></div><div><h4>Ubicación y horarios</h4><p>Mapa y horarios de atención, siempre a mano.</p></div></div>
+        </div>
+        <div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 4.4 branding adaptable -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">4/5</div>
+        </div>
+        <div style="height:30px;"></div>
+        <div class="headline" style="font-size:50px;">Diseño <span class="accent">100% adaptado</span> a tu marca</div>
+        <div style="height:14px;"></div>
+        <div class="sub" style="font-size:24px;">Colores, tipografía y estilo según tu rubro: no hay dos vidrieras iguales.</div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:26px;">
+          <div class="phone" style="width:300px;">
+            <div class="phone-notch" style="width:100px;"></div>
+            <div class="phone-screen">
+              <div class="mya-topbar"><div class="mya-circle">M</div><div class="mya-brand" style="font-size:12px;">Blanquería MyA</div></div>
+              <div class="mya-hero" style="padding:16px 14px;"><h3 style="font-size:15px;">Textiles con calidez</h3></div>
+              <div class="mya-grid" style="grid-template-columns:1fr;padding:8px 16px;"><div class="mya-card"><div class="img" style="height:56px;"></div></div></div>
+            </div>
+          </div>
+          <div class="phone" style="width:300px;border-color:#152242;">
+            <div class="phone-notch" style="width:100px;background:#152242;"></div>
+            <div class="phone-screen" style="background:#F3EADC;">
+              <div class="mya-topbar"><div class="mya-circle" style="background:#152242;color:#fff;">R</div><div class="mya-brand" style="font-size:12px;color:#152242;">Rubro distinto</div></div>
+              <div class="mya-hero" style="padding:16px 14px;background:linear-gradient(180deg,#FFE3D2,#F3EADC);"><h3 style="font-size:15px;color:#152242;">Tu estilo, tu vidriera</h3></div>
+              <div class="mya-grid" style="grid-template-columns:1fr;padding:8px 16px;"><div class="mya-card" style="border-color:#E3D6C4;"><div class="img" style="height:56px;background:linear-gradient(135deg,#FF6B3D,#FFB088);"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 4.5 CTA -->
+    <div class="slide" style="background:var(--navy);">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark" style="background:#fff;"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name" style="color:#fff;">tu vidriera digital</div>
+          <div class="slidenum" style="color:#fff;">5/5</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:26px;">
+          <div class="badge-free"><i class="fa-solid fa-gift"></i> Primer mes GRATIS</div>
+          <div class="headline" style="color:#fff;font-size:56px;max-width:820px;">Tu marca, disponible las 24 horas</div>
+          <div class="price-tag"><span class="lbl">Después, solo</span><span class="val">$25.000<small>/mes</small></span></div>
+          <div class="contact-row">
+            <div class="contact-pill wsp"><i class="fa-brands fa-whatsapp"></i> Escribinos</div>
+            <div class="contact-pill"><i class="fa-brands fa-instagram"></i> @tu_vidrieradigital</div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CARRUSEL 5 -->
+<!-- ============================================================ -->
+<div class="block">
+  <div class="block-head">
+    <div>
+      <h2>Carrusel 5 · Arrancá hoy</h2>
+      <p>Foco en la promoción, el antes/después y los pasos para empezar.</p>
+    </div>
+    <span class="count">5 tarjetas</span>
+  </div>
+  <div class="carousel">
+
+    <!-- 5.1 Cover promo -->
+    <div class="slide" style="background:var(--orange);">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store" style="color:var(--orange);"></i></div>
+          <div class="brand-name" style="color:#fff;">tu vidriera digital</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:24px;">
+          <div style="font-family:'Baloo 2';font-weight:800;font-size:100px;color:#fff;line-height:1;">Primer mes<br>GRATIS 🎉</div>
+          <div class="sub" style="font-size:28px;color:#FFE9DD;max-width:700px;">Probá tu página funcionando de verdad, sin compromiso ni tarjeta.</div>
+        </div>
+        <div class="dots"><span class="on" style="background:#fff;"></span><span style="background:#FFC9AC;"></span><span style="background:#FFC9AC;"></span><span style="background:#FFC9AC;"></span><span style="background:#FFC9AC;"></span></div>
+      </div>
+    </div>
+
+    <!-- 5.2 antes/despues -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">2/5</div>
+        </div>
+        <div style="height:26px;"></div>
+        <div class="headline" style="font-size:46px;">¿Sin web o <span class="accent">con tu vidriera digital?</span></div>
+        <div style="height:20px;"></div>
+        <div class="compare">
+          <div class="col no">
+            <h4><i class="fa-solid fa-circle-xmark"></i> Sin página web</h4>
+            <ul>
+              <li><i class="fa-solid fa-xmark" style="color:var(--red);"></i> Respondés lo mismo por WhatsApp todo el día</li>
+              <li><i class="fa-solid fa-xmark" style="color:var(--red);"></i> El cliente no te encuentra a la noche</li>
+              <li><i class="fa-solid fa-xmark" style="color:var(--red);"></i> Sin catálogo prolijo ni precios claros</li>
+              <li><i class="fa-solid fa-xmark" style="color:var(--red);"></i> Perdés ventas frente a la competencia</li>
+            </ul>
+          </div>
+          <div class="col yes">
+            <h4><i class="fa-solid fa-circle-check"></i> Con tu vidriera</h4>
+            <ul>
+              <li><i class="fa-solid fa-check" style="color:var(--green);"></i> Catálogo siempre disponible, 24/7</li>
+              <li><i class="fa-solid fa-check" style="color:var(--green);"></i> Pedidos ordenados, directo a tu WhatsApp</li>
+              <li><i class="fa-solid fa-check" style="color:var(--green);"></i> Imagen profesional, hecha a tu medida</li>
+              <li><i class="fa-solid fa-check" style="color:var(--green);"></i> Vos manejás todo desde tu panel</li>
+            </ul>
+          </div>
+        </div>
+        <div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 5.3 checklist + precio -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">3/5</div>
+        </div>
+        <div style="height:26px;"></div>
+        <div class="headline" style="font-size:48px;">Qué incluye tu <span class="accent">plan mensual</span></div>
+        <div style="height:12px;"></div>
+        <div>
+          <div class="check-item"><i class="fa-solid fa-circle-check"></i> Página 100% adaptada a tu marca</div>
+          <div class="check-item"><i class="fa-solid fa-circle-check"></i> Panel de administración propio</div>
+          <div class="check-item"><i class="fa-solid fa-circle-check"></i> Pedidos ilimitados por WhatsApp</div>
+          <div class="check-item"><i class="fa-solid fa-circle-check"></i> Hosting y mantenimiento incluidos</div>
+          <div class="check-item"><i class="fa-solid fa-circle-check"></i> Cambios y ajustes cuando los necesites</div>
+          <div class="check-item"><i class="fa-solid fa-circle-check"></i> Cancelás cuando quieras, sin permanencia</div>
+        </div>
+        <div style="margin-top:24px;"><span class="price-tag" style="padding:18px 32px;"><span class="lbl">Desde el 2° mes</span><span class="val" style="font-size:44px;">$25.000<small>/mes</small></span></span></div>
+        <div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 5.4 steps -->
+    <div class="slide">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name">tu vidriera digital</div>
+          <div class="slidenum">4/5</div>
+        </div>
+        <div style="height:26px;"></div>
+        <div class="headline" style="font-size:48px;">Así <span class="accent">empezamos</span></div>
+        <div style="height:24px;"></div>
+        <div class="steps">
+          <div class="step"><div class="num">1</div><div><h4>Nos contás tu negocio</h4><p>Rubro, productos y cómo trabajás hoy con tus clientes.</p></div></div>
+          <div class="step"><div class="num">2</div><div><h4>Elegimos el diseño juntos</h4><p>Colores, estilo y estructura pensados para tu marca.</p></div></div>
+          <div class="step"><div class="num">3</div><div><h4>Cargamos tus productos</h4><p>Fotos, precios y categorías listos para mostrar.</p></div></div>
+          <div class="step"><div class="num">4</div><div><h4>Publicamos tu vidriera</h4><p>Tu página queda online y lista para recibir pedidos.</p></div></div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- 5.5 CTA final -->
+    <div class="slide" style="background:var(--navy);">
+      <div class="slide-pad">
+        <div class="brandrow">
+          <div class="logo-mark" style="background:#fff;"><i class="fa-solid fa-store"></i><span class="sun"></span></div>
+          <div class="brand-name" style="color:#fff;">tu vidriera digital</div>
+          <div class="slidenum" style="color:#fff;">5/5</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:26px;">
+          <div class="badge-free"><i class="fa-solid fa-gift"></i> Primer mes GRATIS</div>
+          <div class="headline" style="color:#fff;font-size:64px;max-width:820px;">Escribinos y arrancá hoy</div>
+          <div class="sub" style="color:#C7CEE0;font-size:26px;max-width:680px;">Después, tu vidriera digital funciona por $25.000 al mes. Sin sorpresas.</div>
+          <div class="contact-row">
+            <div class="contact-pill wsp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</div>
+            <div class="contact-pill"><i class="fa-brands fa-instagram"></i> @tu_vidrieradigital</div>
+          </div>
+        </div>
+        <div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
