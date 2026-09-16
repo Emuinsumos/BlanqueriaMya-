@@ -416,6 +416,10 @@ function App(){
     listaProductos.flatMap(p => medidasDisponiblesDe(p).map(m => m.medida)).filter(Boolean)
   )].sort();
 
+  // Filtro público: solo las medidas que el admin curó en la pestaña "Medidas" Y que además
+  // tienen productos reales disponibles (así no se llena de opciones muertas ni de ruido).
+  const medidasFiltroPublico = medidas.filter(m => medidasEnCatalogo.includes(m));
+
   const listaTablaMedidas = Object.entries(tablaMedidas).map(([id, v]) => ({ id, ...v }));
 
   function agregarItemPublico(){
@@ -945,14 +949,8 @@ function App(){
     if(categoriasNuevasSet.size !== categorias.length){
       tareas.push(db.ref('categorias').set(Array.from(categoriasNuevasSet)));
     }
-    const medidasNuevasSet = new Set(medidas);
-    previewNuevos.productos.forEach(p => p.medidas.forEach(m => {
-      const val = m.medida || 'Única';
-      if(val) medidasNuevasSet.add(val);
-    }));
-    if(medidasNuevasSet.size !== medidas.length){
-      tareas.push(db.ref('medidas').set(Array.from(medidasNuevasSet)));
-    }
+    // Nota: las medidas que trae la planilla NO se agregan automáticamente a la lista de filtro
+    // del cliente, para no llenarla de opciones. Se pueden sumar a mano desde la pestaña "Medidas".
 
     Promise.all(tareas).then(() => {
       setCargandoNuevos(false);
@@ -1178,57 +1176,61 @@ function App(){
 
       {/* HEADER / NAVBAR */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-stone-200/60 shadow-sm transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center gap-4">
-          
-          {/* Logo & Marca */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setCategoria('Todos'); setSearch(''); }}>
-            {config.logo ? (
-              <img src={config.logo} alt="Logo" className="w-10 h-10 object-cover rounded-full border border-brand-200 shadow-sm" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-heading font-bold text-xl shadow-inner">
-                M
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+          <div className="flex justify-between items-center gap-3">
+
+            {/* Logo & Marca */}
+            <div className="flex items-center gap-2.5 cursor-pointer min-w-0" onClick={() => { setCategoria('Todos'); setSearch(''); }}>
+              {config.logo ? (
+                <img src={config.logo} alt="Logo" className="w-9 h-9 sm:w-10 sm:h-10 object-cover rounded-full border border-brand-200 shadow-sm flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-heading font-bold text-lg sm:text-xl shadow-inner flex-shrink-0">
+                  M
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-2xl font-heading font-bold tracking-tight bg-gradient-to-r from-brand-800 via-brand-600 to-amber-700 bg-clip-text text-transparent truncate leading-tight">
+                  {NOMBRE_NEGOCIO}
+                </h1>
+                <p className="text-[10px] tracking-wider uppercase text-stone-400 font-medium hidden sm:block">Textiles para Soñar</p>
               </div>
-            )}
-            <div>
-              <h1 className="text-xl sm:text-2xl font-heading font-bold tracking-tight bg-gradient-to-r from-brand-800 via-brand-600 to-amber-700 bg-clip-text text-transparent">
-                {NOMBRE_NEGOCIO}
-              </h1>
-              <p className="text-[10px] tracking-wider uppercase text-stone-400 font-medium hidden sm:block">Textiles para Soñar</p>
+            </div>
+
+            {/* Acciones principales */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button 
+                onClick={() => setMostrarCarrito(true)}
+                className="relative bg-brand-600 hover:bg-brand-700 text-white pl-3.5 pr-4 py-2.5 rounded-full text-xs sm:text-sm font-bold shadow-lg shadow-brand-600/25 transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95">
+                <i className="fa-solid fa-bag-shopping"></i>
+                <span>Tus compras</span>
+                {cantidadTotalCarrito > 0 && (
+                  <span className="bg-amber-400 text-brand-900 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px] animate-pulse-slow">
+                    {cantidadTotalCarrito}
+                  </span>
+                )}
+              </button>
+
+              {/* Admin Key */}
+              <button 
+                onClick={() => setMostrarAdminModal(true)} 
+                className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-xs transition flex-shrink-0">
+                <i className="fa-solid fa-lock"></i>
+              </button>
             </div>
           </div>
 
-          {/* Acciones Superiores */}
-          <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap justify-end">
+          {/* Acciones secundarias */}
+          <div className="flex items-center gap-2 mt-2.5 overflow-x-auto no-scrollbar">
             <button 
               onClick={() => setMostrarTablaMedidas(true)}
-              className="flex items-center gap-1.5 px-3 py-2.5 rounded-full bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-semibold transition-all border border-stone-200">
-              <span className="text-sm">📏</span> <span>Medidas</span>
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-[11px] font-semibold transition-all border border-stone-200">
+              <span>📏</span> <span>Medidas</span>
             </button>
 
             <button 
               onClick={() => setMostrarCotizador(true)}
-              className="flex items-center gap-1.5 px-3 py-2.5 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold border border-brand-200 transition-all">
-              <span className="text-sm">🧮</span> <span>Presupuesto</span>
-            </button>
-
-            {/* Botón Carrito */}
-            <button 
-              onClick={() => setMostrarCarrito(true)}
-              className="relative bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-full text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95">
-              <i className="fa-solid fa-bag-shopping text-sm"></i>
-              <span className="hidden sm:inline">Mi Carrito</span>
-              {cantidadTotalCarrito > 0 && (
-                <span className="bg-amber-400 text-brand-900 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px] animate-pulse-slow">
-                  {cantidadTotalCarrito}
-                </span>
-              )}
-            </button>
-
-            {/* Admin Key */}
-            <button 
-              onClick={() => setMostrarAdminModal(true)} 
-              className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-xs transition">
-              <i className="fa-solid fa-lock"></i>
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11px] font-semibold border border-brand-200 transition-all">
+              <span>🧮</span> <span>Presupuesto</span>
             </button>
           </div>
         </div>
@@ -1341,7 +1343,7 @@ function App(){
         </div>
 
         {/* Filtro secundario por Medida */}
-        {medidasEnCatalogo.length > 0 && (
+        {medidasFiltroPublico.length > 0 && (
           <div className="flex items-center gap-2 pt-2 overflow-x-auto no-scrollbar text-xs">
             <span className="text-stone-400 font-medium text-[11px] whitespace-nowrap">Filtrar por medida:</span>
             <button
@@ -1351,7 +1353,7 @@ function App(){
               }`}>
               Todas
             </button>
-            {medidasEnCatalogo.map(m => (
+            {medidasFiltroPublico.map(m => (
               <button
                 key={m}
                 onClick={() => setFiltroMedida(m)}
@@ -2089,7 +2091,7 @@ function App(){
 
               {adminTab==='medidas' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-stone-400">Cargá acá las medidas que maneja el comercio (ej: 1 plaza, 1 1/2 plaza, 2 plazas, Queen, King). Después vas a poder asignarle un precio a cada producto según estas medidas.</p>
+                  <p className="text-xs text-stone-400">Esta lista define qué medidas puede elegir el admin al cargar un producto, <b>y también cuáles aparecen como filtro para el cliente</b> (solo se muestran las que además tengan stock real). Curala para que no se llene de opciones que no aportan.</p>
                   <div className="flex gap-2">
                     <input value={nuevaMedida} onChange={e=>setNuevaMedida(e.target.value)} placeholder="Ej: Queen" className="border border-stone-200 rounded-xl flex-1 p-2.5 text-xs"/>
                     <button onClick={agregarMedidaGlobal} className="bg-brand-600 text-white px-4 rounded-xl text-xs font-bold hover:bg-brand-700">Agregar</button>
@@ -2102,6 +2104,20 @@ function App(){
                       </div>
                     ))}
                   </div>
+
+                  {medidasEnCatalogo.filter(m => !medidas.includes(m)).length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-2">
+                      <p className="text-[11px] text-amber-900 font-semibold">Medidas que tenés en productos pero todavía no están en esta lista (por eso no aparecen como filtro):</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {medidasEnCatalogo.filter(m => !medidas.includes(m)).map(m => (
+                          <button key={m} onClick={() => db.ref('medidas').set([...medidas, m])}
+                            className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100">
+                            + {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
