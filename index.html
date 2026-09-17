@@ -269,6 +269,10 @@ function App(){
   const [colorEditCodigo, setColorEditCodigo] = useState('#A67C52');
   const [guardandoColor, setGuardandoColor] = useState(false);
   const [driveLinksInput, setDriveLinksInput] = useState('');
+  const [textoVincularFotos, setTextoVincularFotos] = useState('');
+  const [previewVincularFotos, setPreviewVincularFotos] = useState(null);
+  const [vinculandoFotos, setVinculandoFotos] = useState(false);
+  const [resumenVincularFotos, setResumenVincularFotos] = useState(null);
   const [importando, setImportando] = useState(false);
   const [resumenImportacion, setResumenImportacion] = useState(null);
 
@@ -455,6 +459,10 @@ function App(){
     listaProductos.flatMap(p => medidasDisponiblesDe(p).map(m => m.medida)).filter(Boolean)
   )].sort();
 
+  const coloresEnCatalogo = [...new Set(
+    listaProductos.flatMap(p => medidasDe(p).map(m => m.color)).filter(Boolean)
+  )].sort();
+
   // Filtro público: solo las medidas que el admin curó en la pestaña "Medidas" Y que además
   // tienen productos reales disponibles (así no se llena de opciones muertas ni de ruido).
   const medidasFiltroPublico = normalizarMedidasArr(medidas)
@@ -579,6 +587,73 @@ function App(){
   function cambiarMedidaForm(idx, campo, valor){
     setForm(f => ({...f, medidas: f.medidas.map((m,i)=> i===idx ? {...m, [campo]: valor} : m)}));
   }
+
+  // ===== Vincular fotos en lote por código (de artículo o de barras) =====
+  function previsualizarVincularFotos(){
+    // Mapa código -> {id, nombre} de producto, usando tanto código de barras como código de artículo
+    const mapaCodigos = {};
+    Object.entries(productos).forEach(([id, p]) => {
+      medidasDe(p).forEach(m => {
+        if(m.codigoBarras) mapaCodigos[m.codigoBarras.trim()] = {id, nombre: p.nombre};
+        if(m.codigo) mapaCodigos[m.codigo.trim()] = {id, nombre: p.nombre};
+      });
+    });
+
+    const lineas = textoVincularFotos.split('\n').map(l=>l.trim()).filter(Boolean);
+    const encontradas = []; // {productoId, nombre, url, codigo}
+    const noEncontrados = [];
+    const linkInvalido = [];
+
+    lineas.forEach(linea => {
+      // separa por tab, o si no hay tab, por el primer bloque de espacios/comas
+      let partes = linea.includes('\t') ? linea.split('\t') : linea.split(/[\s,]+/);
+      partes = partes.map(x=>x.trim()).filter(Boolean);
+      if(partes.length < 2) { linkInvalido.push(linea); return; }
+      // el código puede venir primero o el link primero: detectamos cuál de las dos partes es el link
+      let codigo, link;
+      if(/drive\.google|^[a-zA-Z0-9_-]{20,}$/.test(partes[0]) && !/drive\.google/.test(partes[partes.length-1])){
+        link = partes[0]; codigo = partes[partes.length-1];
+      } else {
+        codigo = partes[0]; link = partes[partes.length-1];
+      }
+      // saca extensión de archivo si el código viene como nombre de archivo (ej: 0876-1-6.jpg)
+      codigo = codigo.replace(/\.(jpg|jpeg|png|webp|heic)$/i, '');
+      const id = extraerIdDrive(link);
+      if(!id){ linkInvalido.push(linea); return; }
+      const match = mapaCodigos[codigo] || mapaCodigos[codigo.replace(/-/g,'/')];
+      if(!match){ noEncontrados.push(codigo); return; }
+      encontradas.push({productoId: match.id, nombre: match.nombre, url: `https://lh3.googleusercontent.com/d/${id}=s1200`, codigo});
+    });
+
+    setPreviewVincularFotos({encontradas, noEncontrados, linkInvalido});
+  }
+
+  function confirmarVincularFotos(){
+    if(!previewVincularFotos || previewVincularFotos.encontradas.length===0) return;
+    setVinculandoFotos(true);
+    const porProducto = {};
+    previewVincularFotos.encontradas.forEach(e => {
+      if(!porProducto[e.productoId]) porProducto[e.productoId] = new Set(imagenesDe(productos[e.productoId]));
+      porProducto[e.productoId].add(e.url);
+    });
+    const updates = {};
+    Object.entries(porProducto).forEach(([id, set]) => {
+      updates['productos/'+id+'/imagenes'] = Array.from(set);
+    });
+    db.ref().update(updates).then(() => {
+      setVinculandoFotos(false);
+      setResumenVincularFotos({
+        productos: Object.keys(porProducto).length,
+        fotos: previewVincularFotos.encontradas.length,
+        noEncontrados: previewVincularFotos.noEncontrados.length
+      });
+      setPreviewVincularFotos(null);
+      setTextoVincularFotos('');
+    }).catch(err => {
+      setVinculandoFotos(false);
+      alert('No se pudo guardar: ' + err.message);
+    });
+  }
   function toggleDisponibleForm(idx){
     setForm(f => ({...f, medidas: f.medidas.map((m,i)=> i===idx ? {...m, disponible: !(m.disponible!==false)} : m)}));
   }
@@ -613,6 +688,10 @@ function App(){
   }
   function eliminarColorGlobal(nombre){
     db.ref('colores').set(colores.filter(c => c.nombre !== nombre));
+  }
+  function agregarColorRapido(nombre){
+    if(colores.some(c=>c.nombre===nombre)) return;
+    db.ref('colores').set([...colores, {nombre, codigo:'#A67C52'}]);
   }
   function iniciarEdicionColor(c){
     setEditandoColorNombre(c.nombre);
@@ -851,10 +930,11 @@ function App(){
         const idxDiseno = norm.findIndex(v => v.includes('diseno') || v.includes('linea'));
         const idxDisponibilidad = norm.findIndex(v => v.includes('disponibilidad'));
         const idxArticulo = norm.findIndex(v => v.includes('articulo'));
+        const idxColor = norm.findIndex(v => v.includes('modelo') || v.includes('color'));
         const filaSiguiente = (filas[i+1] || []).map(normalizarHeader);
         let idxPrecio = filaSiguiente.findIndex(v => v === 'l1');
         if(idxPrecio < 0) idxPrecio = norm.findIndex(v => v.includes('precio'));
-        return {headerRow: i, idxRubro, idxMedida, idxCodBarras, idxDiseno, idxDisponibilidad, idxPrecio, idxArticulo};
+        return {headerRow: i, idxRubro, idxMedida, idxCodBarras, idxDiseno, idxDisponibilidad, idxPrecio, idxArticulo, idxColor};
       }
     }
     return null;
@@ -869,6 +949,7 @@ function App(){
       const medida = normTxt(fila[cols.idxMedida]);
       const codBarras = normTxt(fila[cols.idxCodBarras]);
       const articulo = cols.idxArticulo >= 0 ? normTxt(fila[cols.idxArticulo]) : '';
+      const color = cols.idxColor >= 0 ? normTxt(fila[cols.idxColor]) : '';
       let diseno = normTxt(fila[cols.idxDiseno]);
       const precio = cols.idxPrecio >= 0 ? fila[cols.idxPrecio] : null;
       const dispTexto = cols.idxDisponibilidad >= 0 ? normTxt(fila[cols.idxDisponibilidad]) : '';
@@ -881,6 +962,7 @@ function App(){
       }
       productos[idxPorClave[clave]].medidas.push({
         medida,
+        color,
         codigo: articulo,
         codigoBarras: codBarras,
         precio: Number(precio) || 0,
@@ -997,7 +1079,7 @@ function App(){
         categoria: p.categoria || CATEGORIA_PENDIENTE,
         descripcion: '',
         imagenes: [],
-        medidas: p.medidas.map(m => ({medida: m.medida || 'Única', color:'', codigo: m.codigo||'', codigoBarras: m.codigoBarras||'', precio: m.precio||0, disponible:false}))
+        medidas: p.medidas.map(m => ({medida: m.medida || 'Única', color: m.color||'', codigo: m.codigo||'', codigoBarras: m.codigoBarras||'', precio: m.precio||0, disponible:false}))
       };
     });
 
@@ -1968,12 +2050,12 @@ function App(){
             </div>
 
             <div className="px-4 pt-3 flex gap-1.5 overflow-x-auto no-scrollbar border-b border-stone-100 pb-3">
-              {['tablero','productos','medidas','colores','categorias','importar','cargarNuevos','negocio','pedidos','presupuestos','tablaMedidas','chatbot'].map(tab=>(
+              {['tablero','productos','medidas','colores','categorias','importar','cargarNuevos','vincularFotos','negocio','pedidos','presupuestos','tablaMedidas','chatbot'].map(tab=>(
                 <button key={tab} onClick={()=>setAdminTab(tab)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize whitespace-nowrap transition ${
                     adminTab===tab ? 'bg-brand-600 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'
                   }`}>
-                  {tab==='tablero'?'📊 Tablero':tab==='productos'?'Productos':tab==='medidas'?'Medidas':tab==='colores'?'🎨 Colores':tab==='categorias'?'Categorías':tab==='importar'?'📥 Importar planilla':tab==='cargarNuevos'?'📦 Productos nuevos':tab==='negocio'?'Config':tab==='pedidos'?`Pedidos (${pedidosPendientes})`:tab==='presupuestos'?'Presupuestos':tab==='tablaMedidas'?'📏 Tabla de medidas':'🤖 Bot'}
+                  {tab==='tablero'?'📊 Tablero':tab==='productos'?'Productos':tab==='medidas'?'Medidas':tab==='colores'?'🎨 Colores':tab==='categorias'?'Categorías':tab==='importar'?'📥 Importar planilla':tab==='cargarNuevos'?'📦 Productos nuevos':tab==='vincularFotos'?'🖼️ Vincular fotos':tab==='negocio'?'Config':tab==='pedidos'?`Pedidos (${pedidosPendientes})`:tab==='presupuestos'?'Presupuestos':tab==='tablaMedidas'?'📏 Tabla de medidas':'🤖 Bot'}
                 </button>
               ))}
             </div>
@@ -2242,6 +2324,20 @@ function App(){
                     ))}
                     {colores.length===0 && <p className="text-stone-400 text-xs">Todavía no cargaste colores.</p>}
                   </div>
+
+                  {coloresEnCatalogo.filter(c => !colores.some(x=>x.nombre===c)).length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-2">
+                      <p className="text-[11px] text-amber-900 font-semibold">Colores que tenés en productos pero todavía no están cargados acá (se agregan con un tono genérico, después les elegís el tono real con "Editar"):</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {coloresEnCatalogo.filter(c => !colores.some(x=>x.nombre===c)).map(c => (
+                          <button key={c} onClick={() => agregarColorRapido(c)}
+                            className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100">
+                            + {c}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2291,10 +2387,10 @@ function App(){
                   <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 space-y-2">
                     <h3 className="font-bold text-xs uppercase tracking-wider text-sky-800">📦 Cargar productos de una temporada nueva</h3>
                     <p className="text-[11px] text-sky-900 leading-relaxed">
-                      Subí la planilla que te manda la fábrica (funciona tanto con la planilla de pedido por sucursal como con la lista de precios en catálogo). Agrupa las variaciones de un mismo producto por su diseño/línea, y carga <b>nombre, categoría, tamaño, código de barras y precio</b> tal como figuran en la planilla.
+                      Subí la planilla que te manda la fábrica (funciona tanto con la planilla de pedido por sucursal como con la lista de precios en catálogo). Agrupa las variaciones de un mismo producto por su diseño/línea, y carga <b>nombre, categoría, tamaño, color/modelo, código de barras y precio</b> tal como figuran en la planilla (si la planilla trae columna Modelo/Color).
                     </p>
                     <p className="text-[11px] text-sky-900 leading-relaxed">
-                      Quedan marcados como <b>No disponible</b> hasta que vos completes color y foto desde la pestaña "Productos", y actives cada medida cuando esté lista para mostrarse. Los códigos de barras que ya existan en tu catálogo actual no se vuelven a cargar de nuevo. Una vez cargados, podés ir a "Importar planilla" con la misma planilla para que la disponibilidad se sincronice automáticamente por código de barras.
+                      Quedan marcados como <b>No disponible</b> hasta que vos completes la foto desde la pestaña "Productos" y actives cada medida cuando esté lista para mostrarse. Los colores que traiga la planilla y no tengas cargados en la pestaña "Colores" te van a aparecer ahí para sumarlos con un clic. Los códigos de barras que ya existan en tu catálogo actual no se vuelven a cargar de nuevo. Una vez cargados, podés ir a "Importar planilla" con la misma planilla para que la disponibilidad se sincronice automáticamente por código de barras.
                     </p>
                   </div>
 
@@ -2317,7 +2413,7 @@ function App(){
                             <span className="text-stone-400"> ({p.categoria || 'sin categoría'})</span>
                             <div className="text-stone-500">
                               {p.medidas.map((m,j)=>(
-                                <span key={j} className="mr-2">{m.medida||'Única'} · ${m.precio}{j < p.medidas.length-1 ? ',' : ''}</span>
+                                <span key={j} className="mr-2">{m.medida||'Única'}{m.color ? ` (${m.color})` : ''} · ${m.precio}{j < p.medidas.length-1 ? ',' : ''}</span>
                               ))}
                             </div>
                           </div>
@@ -2339,6 +2435,61 @@ function App(){
                       <p className="text-[11px] text-emerald-700">Productos creados: {resumenCargaNuevos.productosNuevos}</p>
                       <p className="text-[11px] text-emerald-700">Medidas/códigos cargados: {resumenCargaNuevos.medidasNuevas}</p>
                       <p className="text-[11px] text-emerald-700">Ya podés ir a la pestaña "Productos", filtrar por categoría "{CATEGORIA_PENDIENTE}" y completar foto, precio y categoría de cada uno.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {adminTab==='vincularFotos' && (
+                <div className="space-y-4">
+                  <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 space-y-2">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-sky-800">🖼️ Vincular fotos en lote desde Drive</h3>
+                    <p className="text-[11px] text-sky-900 leading-relaxed">
+                      Para vincular muchas fotos de una sola vez sin entrar producto por producto:
+                    </p>
+                    <ol className="text-[11px] text-sky-900 leading-relaxed list-decimal pl-4 space-y-1">
+                      <li>En Google Drive, renombrá cada foto con el <b>código de artículo o código de barras</b> del producto al que pertenece (ej: <code>0876-1-6.jpg</code>, reemplazando la "/" por "-").</li>
+                      <li>Seleccioná todas esas fotos → Compartir → asegurate que sea "Cualquiera con el enlace" → Copiar enlaces.</li>
+                      <li>Pegá acá abajo lo que te copió (una línea por foto, con el nombre y el link).</li>
+                    </ol>
+                  </div>
+
+                  <textarea value={textoVincularFotos} onChange={e=>setTextoVincularFotos(e.target.value)} placeholder={"0876-1-6.jpg   https://drive.google.com/file/d/xxxxx/view\n0876-1-1.jpg   https://drive.google.com/file/d/yyyyy/view"} className="w-full border border-stone-200 rounded-xl p-3 text-xs bg-white font-mono" rows="8"></textarea>
+
+                  <button onClick={previsualizarVincularFotos} disabled={!textoVincularFotos.trim()} className="w-full bg-brand-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-brand-700 disabled:opacity-40">Revisar</button>
+
+                  {previewVincularFotos && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                      <p className="text-xs text-amber-800 font-bold">👀 Vista previa (todavía no se guardó nada)</p>
+                      <p className="text-[11px] text-amber-900">Fotos que se van a vincular: <b>{previewVincularFotos.encontradas.length}</b></p>
+                      <p className="text-[11px] text-amber-900">Códigos no encontrados en tu catálogo: {previewVincularFotos.noEncontrados.length}</p>
+                      {previewVincularFotos.noEncontrados.length > 0 && (
+                        <p className="text-[10px] text-amber-700">{previewVincularFotos.noEncontrados.join(', ')}</p>
+                      )}
+                      <p className="text-[11px] text-amber-900">Líneas que no pude leer: {previewVincularFotos.linkInvalido.length}</p>
+
+                      {previewVincularFotos.encontradas.length > 0 && (
+                        <div className="max-h-48 overflow-y-auto border border-amber-100 rounded-xl bg-white/60 p-2 space-y-1">
+                          {previewVincularFotos.encontradas.map((e,i)=>(
+                            <p key={i} className="text-[11px] text-stone-600">{e.codigo} → <span className="font-semibold">{e.nombre}</span></p>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={confirmarVincularFotos} disabled={vinculandoFotos || previewVincularFotos.encontradas.length===0} className="flex-1 bg-brand-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-brand-700 disabled:opacity-50">
+                          {vinculandoFotos ? 'Guardando...' : `Confirmar (${previewVincularFotos.encontradas.length} fotos)`}
+                        </button>
+                        <button onClick={()=>setPreviewVincularFotos(null)} disabled={vinculandoFotos} className="px-4 bg-stone-200 text-stone-600 rounded-xl text-xs">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {resumenVincularFotos && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1">
+                      <p className="text-xs text-emerald-800 font-bold">✅ Listo</p>
+                      <p className="text-[11px] text-emerald-700">Productos actualizados: {resumenVincularFotos.productos}</p>
+                      <p className="text-[11px] text-emerald-700">Fotos vinculadas: {resumenVincularFotos.fotos}</p>
                     </div>
                   )}
                 </div>
