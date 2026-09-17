@@ -13,6 +13,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://blanqueriamya-default-rtdb.firebaseio.com">
+<link rel="dns-prefetch" href="https://blanqueriamya-default-rtdb.firebaseio.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -204,6 +206,7 @@ function fechaCorta(ts){ return new Date(ts).toLocaleDateString('es-AR'); }
 
 function App(){
   const [productos, setProductos] = useState({});
+  const [cargandoProductos, setCargandoProductos] = useState(true);
   const [categorias, setCategorias] = useState([]);
   const [medidas, setMedidas] = useState([]);
   const [colores, setColores] = useState([]);
@@ -296,7 +299,7 @@ function App(){
   const [editandoChatbotId, setEditandoChatbotId] = useState(null);
 
   useEffect(() => {
-    db.ref('productos').on('value', snap => setProductos(snap.val() || {}));
+    db.ref('productos').on('value', snap => { setProductos(snap.val() || {}); setCargandoProductos(false); });
     db.ref('categorias').on('value', snap => setCategorias(snap.val() || []));
     db.ref('medidas').on('value', snap => setMedidas(snap.val() || []));
     db.ref('colores').on('value', snap => setColores(snap.val() || []));
@@ -1430,7 +1433,20 @@ function App(){
       </section>
             {/* CATÁLOGO DE PRODUCTOS (GRID) */}
       <main className="max-w-7xl mx-auto px-4 flex-1 w-full pb-16">
-        {productosFiltrados.length === 0 ? (
+        {cargandoProductos ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 py-6">
+            {[...Array(8)].map((_,i) => (
+              <div key={i} className="rounded-2xl border border-stone-200/80 overflow-hidden animate-pulse">
+                <div className="aspect-[4/5] bg-stone-200"></div>
+                <div className="p-4 space-y-2">
+                  <div className="h-3.5 bg-stone-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-stone-100 rounded w-1/2"></div>
+                  <div className="h-5 bg-stone-200 rounded w-1/3 mt-3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : productosFiltrados.length === 0 ? (
           <div className="text-center py-20 bg-white/60 backdrop-blur-md rounded-3xl border border-stone-200/60 p-8 shadow-sm my-6">
             <div className="w-16 h-16 bg-brand-50 text-brand-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
               🔍
