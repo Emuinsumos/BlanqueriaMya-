@@ -267,6 +267,8 @@ function App(){
   const [editandoColorNombre, setEditandoColorNombre] = useState(null);
   const [colorEditNombre, setColorEditNombre] = useState('');
   const [colorEditCodigo, setColorEditCodigo] = useState('#A67C52');
+  const [colorEditEsColor, setColorEditEsColor] = useState(true);
+  const [nuevoColorEsColor, setNuevoColorEsColor] = useState(true);
   const [guardandoColor, setGuardandoColor] = useState(false);
   const [driveLinksInput, setDriveLinksInput] = useState('');
   const [textoVincularFotos, setTextoVincularFotos] = useState('');
@@ -682,8 +684,8 @@ function App(){
   }
   function agregarColorGlobal(){
     if(!nuevoColorNombre || colores.some(c => c.nombre.toLowerCase() === nuevoColorNombre.toLowerCase())) return;
-    db.ref('colores').set([...colores, {nombre: nuevoColorNombre.trim(), codigo: nuevoColorCodigo}])
-      .then(() => setNuevoColorNombre(''))
+    db.ref('colores').set([...colores, {nombre: nuevoColorNombre.trim(), codigo: nuevoColorCodigo, esColor: nuevoColorEsColor}])
+      .then(() => { setNuevoColorNombre(''); setNuevoColorEsColor(true); })
       .catch(err => alert('No se pudo guardar el color: ' + err.message));
   }
   function eliminarColorGlobal(nombre){
@@ -691,12 +693,15 @@ function App(){
   }
   function agregarColorRapido(nombre){
     if(colores.some(c=>c.nombre===nombre)) return;
-    db.ref('colores').set([...colores, {nombre, codigo:'#A67C52'}]);
+    // Viene de una planilla/import sin confirmar: por default NO se muestra como círculo de color
+    // hasta que el admin lo revise y confirme si es un color real o el nombre de un modelo/diseño.
+    db.ref('colores').set([...colores, {nombre, codigo:'#A67C52', esColor:false}]);
   }
   function iniciarEdicionColor(c){
     setEditandoColorNombre(c.nombre);
     setColorEditNombre(c.nombre);
     setColorEditCodigo(c.codigo);
+    setColorEditEsColor(c.esColor !== false);
   }
   function cancelarEdicionColor(){
     setEditandoColorNombre(null);
@@ -710,7 +715,7 @@ function App(){
       return;
     }
     setGuardandoColor(true);
-    const nuevaListaColores = colores.map(c => c.nombre === nombreOriginal ? {nombre: nombreNuevo, codigo: colorEditCodigo} : c);
+    const nuevaListaColores = colores.map(c => c.nombre === nombreOriginal ? {nombre: nombreNuevo, codigo: colorEditCodigo, esColor: colorEditEsColor} : c);
     const updates = {colores: nuevaListaColores};
     if(nombreNuevo !== nombreOriginal){
       Object.entries(productos).forEach(([id, p]) => {
@@ -737,6 +742,10 @@ function App(){
   function codigoDeColor(nombre){
     const c = colores.find(c => c.nombre === nombre);
     return c ? c.codigo : null;
+  }
+  function esColorReal(nombre){
+    const c = colores.find(c => c.nombre === nombre);
+    return c ? c.esColor !== false : false;
   }
   function handleTablaMedidas(e){
     const files = Array.from(e.target.files);
@@ -1012,11 +1021,27 @@ function App(){
 
         // códigos ya usados en el catálogo actual (no se vuelven a cargar): por código de barras o, si no hay, por código de artículo
         const codigosExistentes = new Set();
-        const codigosBarrasExistentes = new Set();
-        Object.values(productos || {}).forEach(p => {
+        const mapaBarrasExistente = {}; // codigoBarras -> {productoId, nombre}
+        Object.entries(productos || {}).forEach(([id, p]) => {
           medidasDe(p).forEach(m => {
             if(m.codigo) codigosExistentes.add(String(m.codigo).trim());
-            if(m.codigoBarras) codigosBarrasExistentes.add(String(m.codigoBarras).trim());
+            if(m.codigoBarras) mapaBarrasExistente[String(m.codigoBarras).trim()] = {productoId: id, nombre: p.nombre};
+          });
+        });
+        const codigosBarrasExistentes = new Set(Object.keys(mapaBarrasExistente));
+
+        // Si el código de barras ya existe en el catálogo pero le falta el color, y la planilla sí lo trae,
+        // lo completamos aparte (no crea un producto nuevo, solo rellena el color que faltaba).
+        const actualizacionesColor = []; // {productoId, nombre, codigoBarras, color}
+        productosDetectados.forEach(p => {
+          p.medidas.forEach(m => {
+            if(m.codigoBarras && m.color && mapaBarrasExistente[m.codigoBarras]){
+              const prodExistente = productos[mapaBarrasExistente[m.codigoBarras].productoId];
+              const medExistente = medidasDe(prodExistente).find(x => x.codigoBarras === m.codigoBarras);
+              if(medExistente && !medExistente.color){
+                actualizacionesColor.push({productoId: mapaBarrasExistente[m.codigoBarras].productoId, nombre: prodExistente.nombre, codigoBarras: m.codigoBarras, color: m.color});
+              }
+            }
           });
         });
 
@@ -1045,12 +1070,14 @@ function App(){
         const totalMedidas = productosDetectados.reduce((acc,p)=>acc+p.medidas.length,0);
         setPreviewNuevos({
           productos: productosDetectados,
+          actualizacionesColor,
           resumen: {
             hoja: hojaInfo,
             productosNuevos: productosDetectados.length,
             medidasNuevas: totalMedidas,
             duplicadosArchivo,
-            yaExistentes
+            yaExistentes,
+            coloresCompletados: actualizacionesColor.length
           }
         });
       } catch(err){
@@ -1069,7 +1096,10 @@ function App(){
   }
 
   function confirmarCargaProductosNuevos(){
-    if(!previewNuevos || previewNuevos.productos.length===0) return;
+    if(!previewNuevos) return;
+    const hayNuevos = previewNuevos.productos.length > 0;
+    const hayActualizacionesColor = (previewNuevos.actualizacionesColor||[]).length > 0;
+    if(!hayNuevos && !hayActualizacionesColor) return;
     setCargandoNuevos(true);
     const updates = {};
     previewNuevos.productos.forEach(p => {
@@ -1081,6 +1111,19 @@ function App(){
         imagenes: [],
         medidas: p.medidas.map(m => ({medida: m.medida || 'Única', color: m.color||'', codigo: m.codigo||'', codigoBarras: m.codigoBarras||'', precio: m.precio||0, disponible:false}))
       };
+    });
+
+    // Completa el color de medidas que ya existían en el catálogo y no lo tenían cargado
+    const porProductoColor = {};
+    (previewNuevos.actualizacionesColor||[]).forEach(a => {
+      if(!porProductoColor[a.productoId]) porProductoColor[a.productoId] = {};
+      porProductoColor[a.productoId][a.codigoBarras] = a.color;
+    });
+    Object.entries(porProductoColor).forEach(([id, colorPorBarras]) => {
+      const nuevasMedidas = medidasDe(productos[id]).map(m =>
+        (m.codigoBarras && colorPorBarras[m.codigoBarras]) ? {...m, color: colorPorBarras[m.codigoBarras]} : m
+      );
+      updates['productos/'+id+'/medidas'] = nuevasMedidas;
     });
 
     const tareas = [db.ref().update(updates)];
@@ -1860,22 +1903,26 @@ function App(){
                   </div>
                 )}
 
-                {modalMedidaSel && coloresDeMedida.length > 0 && (
+                {modalMedidaSel && coloresDeMedida.length > 0 && (() => {
+                  const hayColorReal = coloresDeMedida.some(c => esColorReal(c));
+                  const etiqueta = hayColorReal ? 'color' : 'modelo';
+                  return (
                   <div className="space-y-2 border-t border-stone-100 pt-3">
-                    <p className="text-xs font-bold text-stone-700">3. Elegí el color</p>
+                    <p className="text-xs font-bold text-stone-700">3. Elegí el {etiqueta}</p>
                     <div className="flex flex-wrap gap-2">
                       {coloresDeMedida.map(col => (
                         <button key={col} onClick={() => setModalColorSel(col)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
                             modalColorSel === col ? 'bg-brand-50 border-brand-500 text-brand-800' : 'bg-white border-stone-200 text-stone-700 hover:border-brand-300'
                           }`}>
-                          {codigoDeColor(col) && <span className="w-3.5 h-3.5 rounded-full border border-stone-300 flex-shrink-0" style={{backgroundColor: codigoDeColor(col)}}></span>}
+                          {esColorReal(col) && codigoDeColor(col) && <span className="w-3.5 h-3.5 rounded-full border border-stone-300 flex-shrink-0" style={{backgroundColor: codigoDeColor(col)}}></span>}
                           {col}
                         </button>
                       ))}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 <button
                   disabled={!varianteFinal}
@@ -1883,7 +1930,7 @@ function App(){
                   className={`w-full py-3 rounded-2xl text-sm font-bold transition ${
                     varianteFinal ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-md' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                   }`}>
-                  {varianteFinal ? '+ Agregar al carrito' : (modalMedidaSel ? 'Elegí un color' : 'Elegí una medida')}
+                  {varianteFinal ? '+ Agregar al carrito' : (modalMedidaSel ? (coloresDeMedida.some(c=>esColorReal(c)) ? 'Elegí un color' : 'Elegí un modelo') : 'Elegí una medida')}
                 </button>
 
                 {productosRelacionados.length > 0 && (
@@ -2168,11 +2215,14 @@ function App(){
                             {normalizarMedidasArr(medidas).map(md => <option key={md.nombre} value={md.nombre}>{md.nombre}</option>)}
                           </select>
                           <div className="flex items-center gap-1.5 flex-1">
-                            {m.color && codigoDeColor(m.color) && (
+                            {m.color && esColorReal(m.color) && codigoDeColor(m.color) && (
                               <span className="w-4 h-4 rounded-full border border-stone-300 flex-shrink-0" style={{backgroundColor: codigoDeColor(m.color)}}></span>
                             )}
                             <select value={m.color||''} onChange={e=>cambiarMedidaForm(idx,'color',e.target.value)} className="border border-stone-200 rounded-xl p-2 text-xs flex-1 bg-white">
-                              <option value="">Color (opcional)</option>
+                              <option value="">Color / Modelo (opcional)</option>
+                              {m.color && !colores.some(c=>c.nombre===m.color) && (
+                                <option value={m.color}>{m.color} (sin curar)</option>
+                              )}
                               {colores.map(c => <option key={c.nombre} value={c.nombre}>{c.nombre}</option>)}
                             </select>
                           </div>
@@ -2241,7 +2291,7 @@ function App(){
                                   ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                                   : 'bg-stone-200 text-stone-400 border border-stone-300 line-through'
                               }`}>
-                              {m.color && codigoDeColor(m.color) && (
+                              {m.color && esColorReal(m.color) && codigoDeColor(m.color) && (
                                 <span className="w-2.5 h-2.5 rounded-full border border-white/60 flex-shrink-0" style={{backgroundColor: codigoDeColor(m.color)}}></span>
                               )}
                               {m.medida}{m.color ? ` · ${m.color}` : ''} · ${m.precio}
@@ -2294,25 +2344,37 @@ function App(){
 
               {adminTab==='colores' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-stone-400">Cargá acá los colores disponibles del comercio: ponele un nombre (ej: Rojo) y elegí el tono exacto. Después vas a poder asignarle un color a cada medida de tus productos, y tus clientes van a ver el nombre junto a un círculo con ese color.</p>
+                  <p className="text-xs text-stone-400">Cargá acá los colores o modelos/variantes de diseño del comercio (ej: Rojo, o "Nativa Cherry" si el nombre del modelo hace de variante): ponele un nombre y, si es un color real, elegí el tono — si es un nombre de modelo, dejá el tono como está, no se va a mostrar el círculo de color. Después vas a poder asignarlo a cada medida de tus productos.</p>
                   <div className="flex gap-2 items-center">
                     <input type="color" value={nuevoColorCodigo} onChange={e=>setNuevoColorCodigo(e.target.value)} className="w-11 h-10 rounded-xl border border-stone-200 p-0.5 bg-white cursor-pointer"/>
                     <input value={nuevoColorNombre} onChange={e=>setNuevoColorNombre(e.target.value)} placeholder="Nombre del color (ej: Rojo)" className="border border-stone-200 rounded-xl flex-1 p-2.5 text-xs"/>
                     <button onClick={agregarColorGlobal} className="bg-brand-600 text-white px-4 rounded-xl text-xs font-bold hover:bg-brand-700">Agregar</button>
                   </div>
+                  <label className="flex items-center gap-1.5 text-[11px] text-stone-500 cursor-pointer">
+                    <input type="checkbox" checked={nuevoColorEsColor} onChange={e=>setNuevoColorEsColor(e.target.checked)} className="w-3.5 h-3.5 accent-brand-600"/>
+                    Es un color real (mostrar el círculo de color al cliente)
+                  </label>
                   <div className="space-y-1.5">
                     {colores.map(c => (
                       editandoColorNombre === c.nombre ? (
-                        <div key={c.nombre} className="flex gap-2 items-center border border-brand-200 bg-brand-50/50 p-2.5 rounded-xl text-xs">
+                        <div key={c.nombre} className="flex flex-wrap gap-2 items-center border border-brand-200 bg-brand-50/50 p-2.5 rounded-xl text-xs">
                           <input type="color" value={colorEditCodigo} onChange={e=>setColorEditCodigo(e.target.value)} className="w-9 h-8 rounded-lg border border-stone-200 p-0.5 bg-white cursor-pointer flex-shrink-0"/>
                           <input value={colorEditNombre} onChange={e=>setColorEditNombre(e.target.value)} className="border border-stone-200 rounded-lg flex-1 p-2 text-xs bg-white"/>
+                          <label className="flex items-center gap-1 text-[10px] text-stone-500 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" checked={colorEditEsColor} onChange={e=>setColorEditEsColor(e.target.checked)} className="w-3.5 h-3.5 accent-brand-600"/>
+                            Es color real
+                          </label>
                           <button onClick={guardarEdicionColor} disabled={guardandoColor} className="text-emerald-600 font-semibold px-2 disabled:opacity-50">Guardar</button>
                           <button onClick={cancelarEdicionColor} disabled={guardandoColor} className="text-stone-400 font-semibold px-1">Cancelar</button>
                         </div>
                       ) : (
                         <div key={c.nombre} className="flex justify-between items-center border border-stone-100 p-2.5 rounded-xl text-xs">
                           <span className="flex items-center gap-2 text-stone-700 font-medium">
-                            <span className="w-4 h-4 rounded-full border border-stone-300 shadow-sm inline-block" style={{backgroundColor: c.codigo}}></span>
+                            {c.esColor !== false ? (
+                              <span className="w-4 h-4 rounded-full border border-stone-300 shadow-sm inline-block" style={{backgroundColor: c.codigo}}></span>
+                            ) : (
+                              <span className="text-[9px] font-bold uppercase tracking-wide text-stone-400 border border-stone-300 rounded px-1 py-0.5">Modelo</span>
+                            )}
                             {c.nombre}
                           </span>
                           <div className="flex items-center gap-3">
@@ -2405,6 +2467,9 @@ function App(){
                       <p className="text-[11px] text-amber-900">Medidas/códigos a cargar: <b>{previewNuevos.resumen.medidasNuevas}</b></p>
                       <p className="text-[11px] text-amber-900">Códigos que ya estaban en tu catálogo (omitidos): {previewNuevos.resumen.yaExistentes}</p>
                       <p className="text-[11px] text-amber-900">Códigos repetidos dentro de la misma planilla (omitidos): {previewNuevos.resumen.duplicadosArchivo}</p>
+                      {previewNuevos.resumen.coloresCompletados > 0 && (
+                        <p className="text-[11px] text-emerald-700 font-semibold">✨ Además, se va a completar el color en {previewNuevos.resumen.coloresCompletados} medidas que ya tenías cargadas y les faltaba.</p>
+                      )}
 
                       <div className="max-h-60 overflow-y-auto border border-amber-100 rounded-xl bg-white/60 p-2 space-y-1.5">
                         {previewNuevos.productos.map((p,i)=>(
@@ -2421,8 +2486,8 @@ function App(){
                       </div>
 
                       <div className="flex gap-2 pt-1">
-                        <button onClick={confirmarCargaProductosNuevos} disabled={cargandoNuevos} className="flex-1 bg-brand-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition disabled:opacity-50">
-                          {cargandoNuevos ? 'Cargando...' : `Confirmar carga (${previewNuevos.resumen.medidasNuevas} medidas)`}
+                        <button onClick={confirmarCargaProductosNuevos} disabled={cargandoNuevos || (previewNuevos.productos.length===0 && previewNuevos.resumen.coloresCompletados===0)} className="flex-1 bg-brand-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition disabled:opacity-50">
+                          {cargandoNuevos ? 'Cargando...' : `Confirmar (${previewNuevos.resumen.medidasNuevas} medidas nuevas${previewNuevos.resumen.coloresCompletados > 0 ? ` + ${previewNuevos.resumen.coloresCompletados} colores` : ''})`}
                         </button>
                         <button onClick={cancelarPreviewNuevos} disabled={cargandoNuevos} className="px-4 bg-stone-200 text-stone-600 rounded-xl text-xs">Cancelar</button>
                       </div>
@@ -2434,6 +2499,9 @@ function App(){
                       <p className="text-xs text-emerald-800 font-bold">✅ Carga completada</p>
                       <p className="text-[11px] text-emerald-700">Productos creados: {resumenCargaNuevos.productosNuevos}</p>
                       <p className="text-[11px] text-emerald-700">Medidas/códigos cargados: {resumenCargaNuevos.medidasNuevas}</p>
+                      {resumenCargaNuevos.coloresCompletados > 0 && (
+                        <p className="text-[11px] text-emerald-700">Colores completados en medidas existentes: {resumenCargaNuevos.coloresCompletados}</p>
+                      )}
                       <p className="text-[11px] text-emerald-700">Ya podés ir a la pestaña "Productos", filtrar por categoría "{CATEGORIA_PENDIENTE}" y completar foto, precio y categoría de cada uno.</p>
                     </div>
                   )}
