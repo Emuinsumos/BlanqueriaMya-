@@ -237,7 +237,7 @@ function App(){
   const [claveAdmin, setClaveAdmin] = useState('');
   const [mostrarAdminModal, setMostrarAdminModal] = useState(false);
   const [adminTab, setAdminTab] = useState('tablero');
-  const [form, setForm] = useState({nombre:'', categoria:'', descripcion:'', video:'', destacado:false, imagenes:[], medidas:[{medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true}]});
+  const [form, setForm] = useState({nombre:'', categoria:'', descripcion:'', video:'', destacado:false, imagenes:[], medidas:[{medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true, imagenes:[]}]});
   const [editandoId, setEditandoId] = useState(null);
   const [aumentoPorcentaje, setAumentoPorcentaje] = useState('');
   const [aumentoRedondeo, setAumentoRedondeo] = useState('100');
@@ -522,17 +522,17 @@ function App(){
       video: p.video || '',
       destacado: !!p.destacado,
       imagenes: imagenesDe(p),
-      medidas: medidasDe(p).length ? medidasDe(p).map(m=>({medida:m.medida, color:m.color||'', codigo:m.codigo||'', codigoBarras:m.codigoBarras||'', precio:String(m.precio), disponible: m.disponible!==false})) : [{medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true}]
+      medidas: medidasDe(p).length ? medidasDe(p).map(m=>({medida:m.medida, color:m.color||'', codigo:m.codigo||'', codigoBarras:m.codigoBarras||'', precio:String(m.precio), disponible: m.disponible!==false, imagenes: m.imagenes||[]})) : [{medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true}]
     });
     setEditandoId(p.id);
     setAdminTab('productos');
   }
   function resetForm(){
-    setForm({nombre:'', categoria:'', descripcion:'', video:'', destacado:false, imagenes:[], medidas:[{medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true}]});
+    setForm({nombre:'', categoria:'', descripcion:'', video:'', destacado:false, imagenes:[], medidas:[{medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true, imagenes:[]}]});
     setEditandoId(null);
   }
   function guardarProducto(){
-    const medidasValidas = form.medidas.filter(m=>m.medida && m.precio).map(m=>({medida:m.medida, color:(m.color||'').trim(), codigo:(m.codigo||'').trim(), codigoBarras:(m.codigoBarras||'').trim(), precio:Number(m.precio), disponible: m.disponible!==false}));
+    const medidasValidas = form.medidas.filter(m=>m.medida && m.precio).map(m=>({medida:m.medida, color:(m.color||'').trim(), codigo:(m.codigo||'').trim(), codigoBarras:(m.codigoBarras||'').trim(), precio:Number(m.precio), disponible: m.disponible!==false, imagenes: m.imagenes||[]}));
     if(!form.nombre || !form.categoria || medidasValidas.length===0) return;
     const id = editandoId || db.ref('productos').push().key;
     db.ref('productos/'+id).set({
@@ -589,6 +589,9 @@ function App(){
   function cambiarMedidaForm(idx, campo, valor){
     setForm(f => ({...f, medidas: f.medidas.map((m,i)=> i===idx ? {...m, [campo]: valor} : m)}));
   }
+  function quitarImagenMedida(idxMedida, idxImagen){
+    setForm(f => ({...f, medidas: f.medidas.map((m,i)=> i===idxMedida ? {...m, imagenes: m.imagenes.filter((_,j)=>j!==idxImagen)} : m)}));
+  }
 
   // ===== Vincular fotos en lote por código (de artículo o de barras) =====
   function previsualizarVincularFotos(){
@@ -596,8 +599,8 @@ function App(){
     const mapaCodigos = {};
     Object.entries(productos).forEach(([id, p]) => {
       medidasDe(p).forEach(m => {
-        if(m.codigoBarras) mapaCodigos[m.codigoBarras.trim()] = {id, nombre: p.nombre};
-        if(m.codigo) mapaCodigos[m.codigo.trim()] = {id, nombre: p.nombre};
+        if(m.codigoBarras) mapaCodigos[m.codigoBarras.trim()] = {id, nombre: p.nombre, matchedCode: m.codigoBarras.trim()};
+        if(m.codigo) mapaCodigos[m.codigo.trim()] = {id, nombre: p.nombre, matchedCode: m.codigo.trim()};
       });
     });
 
@@ -624,7 +627,7 @@ function App(){
       if(!id){ linkInvalido.push(linea); return; }
       const match = mapaCodigos[codigo] || mapaCodigos[codigo.replace(/-/g,'/')];
       if(!match){ noEncontrados.push(codigo); return; }
-      encontradas.push({productoId: match.id, nombre: match.nombre, url: `https://lh3.googleusercontent.com/d/${id}=s1200`, codigo});
+      encontradas.push({productoId: match.id, nombre: match.nombre, url: `https://lh3.googleusercontent.com/d/${id}=s1200`, codigo, matchedCode: match.matchedCode});
     });
 
     setPreviewVincularFotos({encontradas, noEncontrados, linkInvalido});
@@ -633,14 +636,23 @@ function App(){
   function confirmarVincularFotos(){
     if(!previewVincularFotos || previewVincularFotos.encontradas.length===0) return;
     setVinculandoFotos(true);
-    const porProducto = {};
+    // Agrupa por producto, y dentro de cada uno por el código exacto de la medida a la que corresponde la foto
+    const porProducto = {}; // productoId -> { matchedCode -> Set(urls) }
     previewVincularFotos.encontradas.forEach(e => {
-      if(!porProducto[e.productoId]) porProducto[e.productoId] = new Set(imagenesDe(productos[e.productoId]));
-      porProducto[e.productoId].add(e.url);
+      if(!porProducto[e.productoId]) porProducto[e.productoId] = {};
+      if(!porProducto[e.productoId][e.matchedCode]) porProducto[e.productoId][e.matchedCode] = new Set();
+      porProducto[e.productoId][e.matchedCode].add(e.url);
     });
     const updates = {};
-    Object.entries(porProducto).forEach(([id, set]) => {
-      updates['productos/'+id+'/imagenes'] = Array.from(set);
+    Object.entries(porProducto).forEach(([id, porCodigo]) => {
+      const nuevasMedidas = medidasDe(productos[id]).map(m => {
+        const clave = (m.codigoBarras && porCodigo[m.codigoBarras]) ? m.codigoBarras : ((m.codigo && porCodigo[m.codigo]) ? m.codigo : null);
+        if(!clave) return m;
+        const setExistente = new Set(m.imagenes||[]);
+        porCodigo[clave].forEach(u => setExistente.add(u));
+        return {...m, imagenes: Array.from(setExistente)};
+      });
+      updates['productos/'+id+'/medidas'] = nuevasMedidas;
     });
     db.ref().update(updates).then(() => {
       setVinculandoFotos(false);
@@ -660,7 +672,7 @@ function App(){
     setForm(f => ({...f, medidas: f.medidas.map((m,i)=> i===idx ? {...m, disponible: !(m.disponible!==false)} : m)}));
   }
   function agregarFilaMedida(){
-    setForm(f => ({...f, medidas: [...f.medidas, {medida:'', color:'', codigo:'', precio:'', disponible:true}]}));
+    setForm(f => ({...f, medidas: [...f.medidas, {medida:'', color:'', codigo:'', codigoBarras:'', precio:'', disponible:true, imagenes:[]}]}));
   }
   function quitarFilaMedida(idx){
     setForm(f => ({...f, medidas: f.medidas.filter((_,i)=>i!==idx)}));
@@ -1190,7 +1202,7 @@ function App(){
     Object.entries(productos).forEach(([id,p]) => {
       const nuevasMedidas = medidasDe(p).map(m => {
         const nuevo = m.precio * (1 + pct/100);
-        return {medida: m.medida, color: m.color||'', codigo: m.codigo||'', codigoBarras: m.codigoBarras||'', precio: Math.round(nuevo/redondeo)*redondeo, disponible: m.disponible!==false};
+        return {medida: m.medida, color: m.color||'', codigo: m.codigo||'', codigoBarras: m.codigoBarras||'', precio: Math.round(nuevo/redondeo)*redondeo, disponible: m.disponible!==false, imagenes: m.imagenes||[]};
       });
       actualizados[id] = {...p, medidas: nuevasMedidas};
     });
@@ -1798,7 +1810,6 @@ function App(){
       )}
           {/* MODAL DETALLE DE PRODUCTO */}
       {productoVisto && (() => {
-        const imgs = imagenesDe(productoVisto);
         const variantes = medidasDisponiblesDe(productoVisto);
         const medidasUnicas = [...new Set(variantes.map(v => v.medida))];
         const variantesDeMedida = modalMedidaSel ? variantes.filter(v => v.medida === modalMedidaSel) : [];
@@ -1814,6 +1825,11 @@ function App(){
             ? variantesDeMedida.find(v => v.color === modalColorSel)
             : variantesDeMedida[0]
         );
+        // Si la variante elegida (medida+color) tiene sus propias fotos, se muestran esas;
+        // si no, se usa la galería general del producto.
+        const imgs = (varianteFinal && varianteFinal.imagenes && varianteFinal.imagenes.length)
+          ? varianteFinal.imagenes
+          : imagenesDe(productoVisto);
         const productosRelacionados = listaProductos
           .filter(x => x.id !== productoVisto.id && x.categoria === productoVisto.categoria && medidasDisponiblesDe(x).length > 0)
           .slice(0, 3);
@@ -1886,7 +1902,7 @@ function App(){
                   <p className="text-xs font-bold text-stone-700">1. Elegí la medida</p>
                   <div className="flex flex-wrap gap-2">
                     {medidasUnicas.map(med => (
-                      <button key={med} onClick={() => { setModalMedidaSel(med); setModalColorSel(null); }}
+                      <button key={med} onClick={() => { setModalMedidaSel(med); setModalColorSel(null); setIndiceImagen(0); }}
                         className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition ${
                           modalMedidaSel === med ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'bg-stone-50 text-stone-700 border-stone-200 hover:border-brand-300'
                         }`}>
@@ -1911,7 +1927,7 @@ function App(){
                     <p className="text-xs font-bold text-stone-700">3. Elegí el {etiqueta}</p>
                     <div className="flex flex-wrap gap-2">
                       {coloresDeMedida.map(col => (
-                        <button key={col} onClick={() => setModalColorSel(col)}
+                        <button key={col} onClick={() => { setModalColorSel(col); setIndiceImagen(0); }}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
                             modalColorSel === col ? 'bg-brand-50 border-brand-500 text-brand-800' : 'bg-white border-stone-200 text-stone-700 hover:border-brand-300'
                           }`}>
@@ -2241,6 +2257,17 @@ function App(){
                           <i className="fa-solid fa-barcode text-stone-300 text-xs w-4 text-center"></i>
                           <input value={m.codigoBarras||''} onChange={e=>cambiarMedidaForm(idx,'codigoBarras',e.target.value)} placeholder="Código de barras (para actualizar disponibilidad por color)" className="border border-stone-200 rounded-xl p-2 text-xs flex-1 bg-white"/>
                         </div>
+                        {m.imagenes && m.imagenes.length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap pt-1">
+                            {m.imagenes.map((img, imgIdx) => (
+                              <div key={imgIdx} className="relative w-10 h-10 rounded-lg overflow-hidden border border-stone-200">
+                                <img src={img} className="w-full h-full object-cover"/>
+                                <button onClick={()=>quitarImagenMedida(idx, imgIdx)} className="absolute -top-1 -right-1 bg-rose-500 text-white w-3.5 h-3.5 rounded-full text-[8px] flex items-center justify-center">✕</button>
+                              </div>
+                            ))}
+                            <span className="text-[10px] text-stone-400 self-center">Foto{m.imagenes.length>1?'s':''} de esta medida/color (se cargan desde "🖼️ Vincular fotos")</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                     <button onClick={agregarFilaMedida} className="text-xs text-brand-600 font-semibold mb-3 block">+ Agregar medida</button>
@@ -2520,6 +2547,9 @@ function App(){
                       <li>Seleccioná todas esas fotos → Compartir → asegurate que sea "Cualquiera con el enlace" → Copiar enlaces.</li>
                       <li>Pegá acá abajo lo que te copió (una línea por foto, con el nombre y el link).</li>
                     </ol>
+                    <p className="text-[11px] text-sky-900 leading-relaxed">
+                      Cada foto queda vinculada específicamente a esa medida/color (no a todo el producto), así que en la ficha del producto, cuando el cliente elige el modelo o color, va a ver la foto que corresponde a esa variante puntual.
+                    </p>
                   </div>
 
                   <textarea value={textoVincularFotos} onChange={e=>setTextoVincularFotos(e.target.value)} placeholder={"0876-1-6.jpg   https://drive.google.com/file/d/xxxxx/view\n0876-1-1.jpg   https://drive.google.com/file/d/yyyyy/view"} className="w-full border border-stone-200 rounded-xl p-3 text-xs bg-white font-mono" rows="8"></textarea>
