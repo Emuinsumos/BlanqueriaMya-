@@ -1967,12 +1967,14 @@ function App(){
                     <div className="grid grid-cols-3 gap-2.5">
                       {productosRelacionados.map(rel => {
                         const relImgs = imagenesDe(rel);
+                        const relVariantesConFoto = medidasDisponiblesDe(rel).filter(v => v.imagenes && v.imagenes.length);
+                        const relImgPrincipal = relImgs[0] || (relVariantesConFoto[0] && relVariantesConFoto[0].imagenes[0]) || IMG_PLACEHOLDER;
                         const relPrecios = medidasDisponiblesDe(rel).map(v=>v.precio);
                         const relPrecioMin = relPrecios.length ? Math.min(...relPrecios) : 0;
                         return (
                           <button key={rel.id} onClick={() => abrirProducto(rel)} className="text-left group">
                             <div className="aspect-square rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
-                              <img src={relImgs[0] || IMG_PLACEHOLDER} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+                              <img src={relImgPrincipal} onError={e => { e.target.onerror=null; e.target.src=IMG_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
                             </div>
                             <p className="text-[10px] font-medium text-stone-700 mt-1 line-clamp-2 leading-tight">{rel.nombre}</p>
                             <p className="text-[10px] font-bold text-brand-600">Desde ${relPrecioMin}</p>
