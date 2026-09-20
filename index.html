@@ -578,7 +578,7 @@ function App(){
     const noReconocidos = [];
     lineas.forEach(linea => {
       const id = extraerIdDrive(linea);
-      if(id) nuevas.push(`https://lh3.googleusercontent.com/d/${id}=s1200`);
+      if(id) nuevas.push(`https://drive.google.com/thumbnail?id=${id}&sz=w1200`);
       else noReconocidos.push(linea);
     });
     if(nuevas.length){
@@ -630,7 +630,7 @@ function App(){
       if(!id){ linkInvalido.push(linea); return; }
       const match = mapaCodigos[codigo] || mapaCodigos[codigo.replace(/-/g,'/')];
       if(!match){ noEncontrados.push(codigo); return; }
-      encontradas.push({productoId: match.id, nombre: match.nombre, url: `https://lh3.googleusercontent.com/d/${id}=s1200`, codigo, matchedCode: match.matchedCode});
+      encontradas.push({productoId: match.id, nombre: match.nombre, url: `https://drive.google.com/thumbnail?id=${id}&sz=w1200`, codigo, matchedCode: match.matchedCode});
     });
 
     setPreviewVincularFotos({encontradas, noEncontrados, linkInvalido});
@@ -651,9 +651,9 @@ function App(){
       const nuevasMedidas = medidasDe(productos[id]).map(m => {
         const clave = (m.codigoBarras && porCodigo[m.codigoBarras]) ? m.codigoBarras : ((m.codigo && porCodigo[m.codigo]) ? m.codigo : null);
         if(!clave) return m;
-        const setExistente = new Set(m.imagenes||[]);
-        porCodigo[clave].forEach(u => setExistente.add(u));
-        return {...m, imagenes: Array.from(setExistente)};
+        // Reemplaza las fotos de esta medida por las nuevas (no las suma a las viejas), para que un link
+        // roto de una carga anterior no quede mezclado con el link bueno.
+        return {...m, imagenes: Array.from(porCodigo[clave])};
       });
       updates['productos/'+id+'/medidas'] = nuevasMedidas;
     });
