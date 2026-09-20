@@ -1504,7 +1504,8 @@ function App(){
             {productosDestacados.map(p => {
               const variantes = medidasDisponiblesDe(p);
               const precioMin = variantes.length ? Math.min(...variantes.map(v => Number(v.precio))) : 0;
-              const img = imagenesDe(p)[0];
+              const variantesConFoto = variantes.filter(v => v.imagenes && v.imagenes.length);
+              const img = imagenesDe(p)[0] || (variantesConFoto[0] && variantesConFoto[0].imagenes[0]);
               return (
                 <div key={p.id} onClick={() => abrirProducto(p)}
                   className="flex-shrink-0 w-40 bg-white rounded-2xl border border-brand-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden">
@@ -1602,6 +1603,8 @@ function App(){
               const imgs = imagenesDe(p);
               const variantes = medidasDisponiblesDe(p);
               const precioMin = variantes.length ? Math.min(...variantes.map(v => Number(v.precio))) : 0;
+              const variantesConFoto = variantes.filter(v => v.imagenes && v.imagenes.length);
+              const imgPrincipal = imgs[0] || (variantesConFoto[0] && variantesConFoto[0].imagenes[0]) || 'https://images.unsplash.com/photo-1616627547584-bf28cee262db?auto=format&fit=crop&w=600&q=80';
 
               return (
                 <div 
@@ -1611,8 +1614,9 @@ function App(){
                   {/* Contenedor Imagen */}
                   <div className="relative aspect-[4/5] bg-stone-100 overflow-hidden cursor-pointer" onClick={() => abrirProducto(p)}>
                     <img 
-                      src={imgs[0] || 'https://images.unsplash.com/photo-1616627547584-bf28cee262db?auto=format&fit=crop&w=600&q=80'} 
+                      src={imgPrincipal} 
                       alt={p.nombre}
+                      onError={e => { e.target.onerror=null; e.target.src='https://images.unsplash.com/photo-1616627547584-bf28cee262db?auto=format&fit=crop&w=600&q=80'; }}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     
