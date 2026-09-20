@@ -1833,10 +1833,15 @@ function App(){
             : variantesDeMedida[0]
         );
         // Si la variante elegida (medida+color) tiene sus propias fotos, se muestran esas;
-        // si no, se usa la galería general del producto.
+        // si no se eligió nada todavía, se arma una galería con las fotos generales del producto
+        // más las de todas sus variantes, para que se pueda ver algo y deslizar desde que se abre.
+        const galeriaCompleta = [...new Set([
+          ...imagenesDe(productoVisto),
+          ...variantes.flatMap(v => v.imagenes || [])
+        ])];
         const imgs = (varianteFinal && varianteFinal.imagenes && varianteFinal.imagenes.length)
           ? varianteFinal.imagenes
-          : imagenesDe(productoVisto);
+          : galeriaCompleta;
         const productosRelacionados = listaProductos
           .filter(x => x.id !== productoVisto.id && x.categoria === productoVisto.categoria && medidasDisponiblesDe(x).length > 0)
           .slice(0, 3);
