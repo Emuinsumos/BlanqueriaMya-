@@ -278,6 +278,9 @@ function App(){
   const [previewVincularFotos, setPreviewVincularFotos] = useState(null);
   const [vinculandoFotos, setVinculandoFotos] = useState(false);
   const [resumenVincularFotos, setResumenVincularFotos] = useState(null);
+  const [previewLimpiarFotos, setPreviewLimpiarFotos] = useState(null);
+  const [limpiandoFotos, setLimpiandoFotos] = useState(false);
+  const [resumenLimpiarFotos, setResumenLimpiarFotos] = useState(null);
   const [importando, setImportando] = useState(false);
   const [resumenImportacion, setResumenImportacion] = useState(null);
 
@@ -671,6 +674,53 @@ function App(){
       alert('No se pudo guardar: ' + err.message);
     });
   }
+
+  // ===== Limpiar fotos pesadas (base64) guardadas antes de usar links de Drive =====
+  function esFotoPesadaBase64(url){
+    return typeof url === 'string' && url.startsWith('data:image');
+  }
+  function previsualizarLimpiarFotos(){
+    const afectados = []; // {productoId, nombre, cantidadGeneral, cantidadMedidas, bytesAprox}
+    let totalFotos = 0, totalBytes = 0;
+    Object.entries(productos).forEach(([id, p]) => {
+      const generales = imagenesDe(p).filter(esFotoPesadaBase64);
+      let cantidadMedidas = 0;
+      medidasDe(p).forEach(m => {
+        cantidadMedidas += (m.imagenes||[]).filter(esFotoPesadaBase64).length;
+      });
+      const cantidad = generales.length + cantidadMedidas;
+      if(cantidad > 0){
+        const bytes = generales.reduce((a,u)=>a+u.length,0) +
+          medidasDe(p).flatMap(m=>(m.imagenes||[]).filter(esFotoPesadaBase64)).reduce((a,u)=>a+u.length,0);
+        afectados.push({productoId: id, nombre: p.nombre, cantidadGeneral: generales.length, cantidadMedidas, cantidad, bytes});
+        totalFotos += cantidad;
+        totalBytes += bytes;
+      }
+    });
+    setPreviewLimpiarFotos({afectados, totalFotos, totalBytes, totalProductos: afectados.length});
+  }
+  function confirmarLimpiarFotos(){
+    if(!previewLimpiarFotos || previewLimpiarFotos.afectados.length===0) return;
+    setLimpiandoFotos(true);
+    const updates = {};
+    previewLimpiarFotos.afectados.forEach(a => {
+      const p = productos[a.productoId];
+      updates['productos/'+a.productoId+'/imagenes'] = imagenesDe(p).filter(u => !esFotoPesadaBase64(u));
+      updates['productos/'+a.productoId+'/medidas'] = medidasDe(p).map(m => ({
+        ...m,
+        imagenes: (m.imagenes||[]).filter(u => !esFotoPesadaBase64(u))
+      }));
+    });
+    db.ref().update(updates).then(() => {
+      setLimpiandoFotos(false);
+      setResumenLimpiarFotos({productos: previewLimpiarFotos.totalProductos, fotos: previewLimpiarFotos.totalFotos});
+      setPreviewLimpiarFotos(null);
+    }).catch(err => {
+      setLimpiandoFotos(false);
+      alert('No se pudo limpiar: ' + err.message);
+    });
+  }
+
   function toggleDisponibleForm(idx){
     setForm(f => ({...f, medidas: f.medidas.map((m,i)=> i===idx ? {...m, disponible: !(m.disponible!==false)} : m)}));
   }
@@ -2604,6 +2654,47 @@ function App(){
                       <p className="text-[11px] text-emerald-700">Fotos vinculadas: {resumenVincularFotos.fotos}</p>
                     </div>
                   )}
+
+                  <div className="border-t border-stone-200 pt-4 mt-2 space-y-3">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-rose-700">🧹 Limpiar fotos pesadas viejas</h3>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Las fotos que subiste como archivo (antes de usar Drive) quedan guardadas como texto larguísimo adentro de la base de datos, y son las que hacen que la web cargue lenta. Esto las busca y las borra, sin tocar ninguna foto que ya sea un link (Drive, etc.).
+                    </p>
+                    <button onClick={previsualizarLimpiarFotos} className="w-full bg-rose-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-rose-700">Buscar fotos pesadas</button>
+
+                    {previewLimpiarFotos && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                        {previewLimpiarFotos.totalFotos === 0 ? (
+                          <p className="text-xs text-amber-900">No encontré fotos pesadas guardadas. Ya está todo limpio.</p>
+                        ) : (
+                          <>
+                            <p className="text-xs text-amber-800 font-bold">👀 Vista previa (todavía no se borró nada)</p>
+                            <p className="text-[11px] text-amber-900">Productos afectados: <b>{previewLimpiarFotos.totalProductos}</b></p>
+                            <p className="text-[11px] text-amber-900">Fotos pesadas a borrar: <b>{previewLimpiarFotos.totalFotos}</b> (~{Math.round(previewLimpiarFotos.totalBytes/1024/1024*10)/10} MB)</p>
+                            <div className="max-h-40 overflow-y-auto border border-amber-100 rounded-xl bg-white/60 p-2 space-y-1">
+                              {previewLimpiarFotos.afectados.map(a => (
+                                <p key={a.productoId} className="text-[11px] text-stone-600">{a.nombre}: {a.cantidad} foto{a.cantidad>1?'s':''}</p>
+                              ))}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              <button onClick={confirmarLimpiarFotos} disabled={limpiandoFotos} className="flex-1 bg-rose-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-rose-700 disabled:opacity-50">
+                                {limpiandoFotos ? 'Borrando...' : `Borrar ${previewLimpiarFotos.totalFotos} fotos pesadas`}
+                              </button>
+                              <button onClick={()=>setPreviewLimpiarFotos(null)} disabled={limpiandoFotos} className="px-4 bg-stone-200 text-stone-600 rounded-xl text-xs">Cancelar</button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {resumenLimpiarFotos && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1">
+                        <p className="text-xs text-emerald-800 font-bold">✅ Limpieza completa</p>
+                        <p className="text-[11px] text-emerald-700">Productos limpiados: {resumenLimpiarFotos.productos}</p>
+                        <p className="text-[11px] text-emerald-700">Fotos pesadas borradas: {resumenLimpiarFotos.fotos}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
