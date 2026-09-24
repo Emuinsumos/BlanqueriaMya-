@@ -313,13 +313,11 @@ function App(){
   const [editandoChatbotId, setEditandoChatbotId] = useState(null);
 
   useEffect(() => {
+    // Datos públicos: necesarios para cualquiera que entra a mirar el catálogo.
     db.ref('productos').on('value', snap => { setProductos(snap.val() || {}); setCargandoProductos(false); });
     db.ref('categorias').on('value', snap => setCategorias(snap.val() || []));
     db.ref('medidas').on('value', snap => setMedidas(snap.val() || []));
     db.ref('colores').on('value', snap => setColores(snap.val() || []));
-    db.ref('tablaMedidas').on('value', snap => setTablaMedidas(snap.val() || {}));
-    db.ref('pedidos').on('value', snap => setPedidos(snap.val() || {}));
-    db.ref('clientes').on('value', snap => setClientes(snap.val() || {}));
     db.ref('config').on('value', snap => {
       const c = snap.val() || {whatsapp:'5491137606525', instagram:'blanqueriaa_mya', logo:''};
       setConfig(c);
@@ -333,7 +331,28 @@ function App(){
       setSaludoBotInput(saludo);
       setChatbotPreguntas(val.preguntas || {});
     });
+    // pedidos, clientes (solo las usa el admin) y tablaMedidas (pesa por las imágenes de la guía)
+    // se piden aparte, más abajo, recién cuando hacen falta: así el catálogo carga liviano para
+    // cualquier cliente que entra a mirar productos.
   }, []);
+
+  // Pedidos y clientes: son datos exclusivos del panel de administración, no hace falta
+  // bajarlos para un cliente que solo está mirando el catálogo. Se piden recién al loguearse como admin.
+  useEffect(() => {
+    if(!isAdmin) return;
+    db.ref('pedidos').on('value', snap => setPedidos(snap.val() || {}));
+    db.ref('clientes').on('value', snap => setClientes(snap.val() || {}));
+  }, [isAdmin]);
+
+  // Tabla de medidas: puede tener imágenes pesadas de la guía. Se pide recién la primera vez
+  // que alguien la necesita (cliente que abre "📏 Medidas", o admin en esa pestaña), no de entrada.
+  const tablaMedidasPedidaRef = useRef(false);
+  useEffect(() => {
+    const haceFalta = mostrarTablaMedidas || (mostrarAdminModal && isAdmin && adminTab === 'tablaMedidas');
+    if(!haceFalta || tablaMedidasPedidaRef.current) return;
+    tablaMedidasPedidaRef.current = true;
+    db.ref('tablaMedidas').on('value', snap => setTablaMedidas(snap.val() || {}));
+  }, [mostrarTablaMedidas, mostrarAdminModal, isAdmin, adminTab]);
 
   // Chat: saludo inicial al abrir por primera vez, y autoscroll al último mensaje
   useEffect(() => {
