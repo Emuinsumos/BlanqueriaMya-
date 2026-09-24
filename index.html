@@ -1516,36 +1516,28 @@ function App(){
         </div>
       </section>
 
-      {/* BANNER ROTATIVO DE PRODUCTOS ALEATORIOS */}
-      {bannerProductos.length > 0 && (() => {
-        const p = bannerProductos[bannerIndice];
-        const variantes = medidasDisponiblesDe(p);
-        const variantesConFoto = variantes.filter(v => v.imagenes && v.imagenes.length);
-        const img = imagenesDe(p)[0] || (variantesConFoto[0] && variantesConFoto[0].imagenes[0]) || IMG_PLACEHOLDER;
-        const precioMin = variantes.length ? Math.min(...variantes.map(v => Number(v.precio))) : 0;
-        return (
-          <section className="max-w-7xl mx-auto px-4 w-full pt-4">
-            <div
-              key={p.id}
-              onClick={() => abrirProducto(p)}
-              className="cursor-pointer rounded-3xl overflow-hidden border border-brand-100 bg-gradient-to-r from-brand-50 to-amber-50 shadow-sm flex items-center gap-4 p-3.5 sm:p-5 animate-fade-in hover:shadow-md transition-all">
-              <div className="w-16 h-16 sm:w-24 sm:h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white border border-stone-200">
-                <img src={img} alt={p.nombre} onError={e => { e.target.onerror=null; e.target.src=IMG_PLACEHOLDER; }} className="w-full h-full object-cover"/>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-brand-500 mb-0.5">✨ Te puede interesar</p>
-                <h3 className="font-heading font-bold text-sm sm:text-base text-stone-800 truncate">{p.nombre}</h3>
-                <p className="text-[11px] text-stone-500 truncate">{p.categoria}{precioMin ? ` • desde $${precioMin}` : ''}</p>
-              </div>
-              <div className="flex gap-1.5 flex-shrink-0">
-                {bannerProductos.map((_, idx) => (
-                  <span key={idx} className={`h-1.5 rounded-full transition-all duration-300 ${idx === bannerIndice ? 'bg-brand-600 w-4' : 'bg-stone-300 w-1.5'}`}></span>
-                ))}
-              </div>
-            </div>
-          </section>
-        );
-      })()}
+      {/* PRODUCTOS DESTACADOS (versión compacta) */}
+      {productosDestacados.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 w-full pt-4">
+          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+            <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-brand-500 flex items-center gap-1">
+              <span>⭐</span> Destacados
+            </span>
+            {productosDestacados.map(p => {
+              const variantes = medidasDisponiblesDe(p);
+              const variantesConFoto = variantes.filter(v => v.imagenes && v.imagenes.length);
+              const img = imagenesDe(p)[0] || (variantesConFoto[0] && variantesConFoto[0].imagenes[0]) || IMG_PLACEHOLDER;
+              return (
+                <button key={p.id} onClick={() => abrirProducto(p)}
+                  className="flex-shrink-0 flex items-center gap-2 bg-white border border-stone-200 rounded-full pl-1 pr-3 py-1 hover:border-brand-300 hover:shadow-sm transition-all">
+                  <img src={img} alt={p.nombre} onError={e => { e.target.onerror=null; e.target.src=IMG_PLACEHOLDER; }} className="w-6 h-6 rounded-full object-cover flex-shrink-0"/>
+                  <span className="text-[11px] font-semibold text-stone-700 whitespace-nowrap max-w-[110px] truncate">{p.nombre}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* HERO BANNER SECTION */}
       <section className="relative overflow-hidden py-10 sm:py-14 px-4 bg-gradient-to-b from-brand-100/40 via-stone-50/50 to-transparent">
@@ -1594,35 +1586,41 @@ function App(){
         </div>
       </section>
 
-      {/* PRODUCTOS DESTACADOS */}
-      {productosDestacados.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 w-full mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">⭐</span>
-            <h2 className="font-heading font-bold text-lg text-stone-800">Destacados</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
-            {productosDestacados.map(p => {
-              const variantes = medidasDisponiblesDe(p);
-              const precioMin = variantes.length ? Math.min(...variantes.map(v => Number(v.precio))) : 0;
-              const variantesConFoto = variantes.filter(v => v.imagenes && v.imagenes.length);
-              const img = imagenesDe(p)[0] || (variantesConFoto[0] && variantesConFoto[0].imagenes[0]);
-              return (
-                <div key={p.id} onClick={() => abrirProducto(p)}
-                  className="flex-shrink-0 w-40 bg-white rounded-2xl border border-brand-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden">
-                  <div className="w-full aspect-[4/5] bg-stone-100 flex items-center justify-center overflow-hidden">
-                    {img ? <img src={img} alt={p.nombre} onError={e => { e.target.onerror=null; e.target.src=IMG_PLACEHOLDER; }} className="w-full h-full object-cover"/> : <i className="fa-solid fa-image text-stone-300 text-2xl"></i>}
-                  </div>
-                  <div className="p-2.5">
-                    <p className="text-xs font-semibold text-stone-700 truncate">{p.nombre}</p>
-                    <p className="font-heading italic font-bold text-brand-700 mt-0.5">${precioMin}</p>
-                  </div>
+      {/* BANNER ROTATIVO DE PRODUCTOS ALEATORIOS (destacado, grande) */}
+      {bannerProductos.length > 0 && (() => {
+        const p = bannerProductos[bannerIndice];
+        const variantes = medidasDisponiblesDe(p);
+        const variantesConFoto = variantes.filter(v => v.imagenes && v.imagenes.length);
+        const img = imagenesDe(p)[0] || (variantesConFoto[0] && variantesConFoto[0].imagenes[0]) || IMG_PLACEHOLDER;
+        const precioMin = variantes.length ? Math.min(...variantes.map(v => Number(v.precio))) : 0;
+        return (
+          <section className="max-w-7xl mx-auto px-4 w-full mb-8">
+            <div
+              key={p.id}
+              onClick={() => abrirProducto(p)}
+              className="cursor-pointer rounded-3xl overflow-hidden border border-brand-200 bg-gradient-to-r from-brand-50 via-white to-amber-50 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in flex flex-col sm:flex-row items-stretch">
+              <div className="w-full sm:w-80 h-52 sm:h-auto flex-shrink-0 bg-white">
+                <img src={img} alt={p.nombre} onError={e => { e.target.onerror=null; e.target.src=IMG_PLACEHOLDER; }} className="w-full h-full object-cover"/>
+              </div>
+              <div className="flex-1 p-6 sm:p-8 flex flex-col justify-center gap-2">
+                <span className="inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-[11px] font-bold uppercase tracking-wider">
+                  ✨ Te puede interesar
+                </span>
+                <h2 className="font-heading font-bold text-2xl sm:text-3xl text-stone-800">{p.nombre}</h2>
+                <p className="text-sm text-stone-500">{p.categoria}</p>
+                {precioMin > 0 && (
+                  <p className="font-heading italic font-bold text-brand-700 text-xl sm:text-2xl mt-1">Desde ${precioMin}</p>
+                )}
+                <div className="flex gap-1.5 mt-3">
+                  {bannerProductos.map((_, idx) => (
+                    <span key={idx} className={`h-1.5 rounded-full transition-all duration-300 ${idx === bannerIndice ? 'bg-brand-600 w-6' : 'bg-stone-300 w-1.5'}`}></span>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       <div className="trama-textil"></div>
 
