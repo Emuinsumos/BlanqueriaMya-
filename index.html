@@ -523,6 +523,16 @@ function App(){
   const listaClientes = Object.entries(clientes).map(([id, c]) => ({id, ...c}));
   const pedidosPendientes = listaPedidos.filter(p => p.estado === 'recibido').length;
 
+  // Productos/variantes que todavía no tienen ninguna foto propia ni general
+  const productosSinFotoInfo = listaProductos
+    .filter(p => medidasDisponiblesDe(p).length > 0)
+    .map(p => ({
+      p,
+      tieneGeneral: imagenesDe(p).length > 0,
+      variantesFaltantes: medidasDisponiblesDe(p).filter(m => !(m.imagenes && m.imagenes.length))
+    }))
+    .filter(x => !x.tieneGeneral && x.variantesFaltantes.length > 0);
+
   function intentarLogin(){
     if(usuario === 'Guada' && contrasena === 'lupe'){
       setIsAdmin(true);
@@ -2223,12 +2233,12 @@ function App(){
             </div>
 
             <div className="px-4 pt-3 flex gap-1.5 overflow-x-auto no-scrollbar border-b border-stone-100 pb-3">
-              {['tablero','productos','medidas','colores','categorias','importar','cargarNuevos','vincularFotos','negocio','pedidos','presupuestos','tablaMedidas','chatbot'].map(tab=>(
+              {['tablero','productos','medidas','colores','categorias','importar','cargarNuevos','vincularFotos','sinFotos','negocio','pedidos','presupuestos','tablaMedidas','chatbot'].map(tab=>(
                 <button key={tab} onClick={()=>setAdminTab(tab)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize whitespace-nowrap transition ${
                     adminTab===tab ? 'bg-brand-600 text-white shadow-sm' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'
                   }`}>
-                  {tab==='tablero'?'📊 Tablero':tab==='productos'?'Productos':tab==='medidas'?'Medidas':tab==='colores'?'🎨 Colores':tab==='categorias'?'Categorías':tab==='importar'?'📥 Importar planilla':tab==='cargarNuevos'?'📦 Productos nuevos':tab==='vincularFotos'?'🖼️ Vincular fotos':tab==='negocio'?'Config':tab==='pedidos'?`Pedidos (${pedidosPendientes})`:tab==='presupuestos'?'Presupuestos':tab==='tablaMedidas'?'📏 Tabla de medidas':'🤖 Bot'}
+                  {tab==='tablero'?'📊 Tablero':tab==='productos'?'Productos':tab==='medidas'?'Medidas':tab==='colores'?'🎨 Colores':tab==='categorias'?'Categorías':tab==='importar'?'📥 Importar planilla':tab==='cargarNuevos'?'📦 Productos nuevos':tab==='vincularFotos'?'🖼️ Vincular fotos':tab==='sinFotos'?`📷 Sin fotos (${productosSinFotoInfo.length})`:tab==='negocio'?'Config':tab==='pedidos'?`Pedidos (${pedidosPendientes})`:tab==='presupuestos'?'Presupuestos':tab==='tablaMedidas'?'📏 Tabla de medidas':'🤖 Bot'}
                 </button>
               ))}
             </div>
@@ -2743,6 +2753,40 @@ function App(){
                   </div>
                 </div>
               )}
+
+              {adminTab==='sinFotos' && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-amber-800">📷 Productos sin foto</h3>
+                    <p className="text-[11px] text-amber-900 leading-relaxed">
+                      Esta lista se arma sola con lo que hay cargado ahora mismo: son los productos (o medidas/colores puntuales) que todavía no tienen ninguna foto propia ni una foto general que los cubra. Un producto con al menos una foto general ya no aparece acá, aunque le falten fotos de algún color en particular.
+                    </p>
+                  </div>
+
+                  {productosSinFotoInfo.length === 0 ? (
+                    <p className="text-xs text-stone-400 text-center py-8">🎉 Todos los productos disponibles tienen al menos una foto.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {productosSinFotoInfo.map(({p, variantesFaltantes}) => (
+                        <div key={p.id} className="bg-white border border-stone-200 rounded-2xl p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-xs text-stone-800">{p.nombre}</p>
+                            <span className="text-[10px] text-stone-400">{p.categoria}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {variantesFaltantes.map((m, idx) => (
+                              <span key={idx} className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-1">
+                                {m.medida}{m.color ? ` • ${m.color}` : ''}{(m.codigo || m.codigoBarras) ? ` (${m.codigo || m.codigoBarras})` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
 
               {adminTab==='negocio' && (
                 <div className="space-y-4">
