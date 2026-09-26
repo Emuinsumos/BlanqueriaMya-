@@ -552,6 +552,24 @@ function App(){
     }))
     .filter(x => x.variantesFaltantes.length > 0);
 
+  // Variantes de distinto color/modelo que están usando exactamente la misma foto:
+  // puede ser legítimo (el proveedor solo dio una foto para todo el diseño, ej. Sense)
+  // o puede ser el bug de haber vinculado por código de artículo compartido en vez de por código de barras.
+  const productosFotoCompartidaInfo = listaProductos.map(p => {
+    const porFoto = {};
+    medidasDisponiblesDe(p).forEach(m => {
+      if(m.imagenes && m.imagenes.length && m.color){
+        const clave = m.imagenes.join('|');
+        if(!porFoto[clave]) porFoto[clave] = new Set();
+        porFoto[clave].add(m.color);
+      }
+    });
+    const grupos = Object.entries(porFoto)
+      .filter(([clave, colores]) => colores.size > 1)
+      .map(([clave, colores]) => ({foto: clave.split('|')[0], colores: [...colores]}));
+    return {p, grupos};
+  }).filter(x => x.grupos.length > 0);
+
   function intentarLogin(){
     if(usuario === 'Guada' && contrasena === 'lupe'){
       setIsAdmin(true);
@@ -2813,6 +2831,38 @@ function App(){
                               </span>
                             ))}
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1 mt-6">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-amber-800">🔗 Fotos compartidas entre modelos/colores</h3>
+                    <p className="text-[11px] text-amber-900 leading-relaxed">
+                      Estos productos tienen 2 o más modelos/colores DISTINTOS apuntando exactamente a la misma foto. A veces es correcto (el proveedor solo dio una foto de fábrica para todo el diseño, como pasa con "Sense"), pero a veces es porque se vinculó por código de artículo compartido en vez de por código de barras (fue el caso de "Infantil Soft"). Revisá cada uno y si corresponde, resubí por separado con "Vincular fotos" usando el código de barras.
+                    </p>
+                  </div>
+
+                  {productosFotoCompartidaInfo.length === 0 ? (
+                    <p className="text-xs text-stone-400 text-center py-8">🎉 No se detectaron fotos compartidas entre colores/modelos distintos.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {productosFotoCompartidaInfo.map(({p, grupos}) => (
+                        <div key={p.id} className="bg-white border border-stone-200 rounded-2xl p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-xs text-stone-800">{p.nombre}</p>
+                            <span className="text-[10px] text-stone-400">{p.categoria}</span>
+                          </div>
+                          {grupos.map((g, gi) => (
+                            <div key={gi} className="mt-2">
+                              <img src={g.foto} onError={e=>{e.target.onerror=null;e.target.src=IMG_PLACEHOLDER;}} className="w-10 h-10 rounded-lg object-cover border border-stone-200 inline-block mr-2 align-middle"/>
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {g.colores.map((c, ci) => (
+                                  <span key={ci} className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2.5 py-1">{c}</span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
