@@ -78,13 +78,7 @@ function App(){
   const [bannerProductos, setBannerProductos] = useState([]);
   const [bannerIndice, setBannerIndice] = useState(0);
   const [verTodasCat, setVerTodasCat] = useState(false);
-  const [tickCat, setTickCat] = useState(0);
   const headerRef = useRef(null);
-  useEffect(() => {
-    if(categoria !== 'Todos' || search) return;
-    const t = setInterval(() => setTickCat(n => n + 1), 5000);
-    return () => clearInterval(t);
-  }, [categoria, search]);
   const [headerH, setHeaderH] = useState(96);
   useEffect(() => {
     const medir = () => { if(headerRef.current) setHeaderH(headerRef.current.offsetHeight); };
@@ -360,7 +354,7 @@ function App(){
   // Solo categorías con productos en stock (y sin la de "sin categorizar"), con cantidad y foto
   const infoCategorias = categorias.filter(c => !c.includes('Sin categorizar')).map(c => {
     const ps = listaProductos.filter(p => p.categoria === c && medidasDisponiblesDe(p).length > 0);
-    return {nombre: c, cantidad: ps.length, fotos: [...new Set(ps.map(fotoDeProducto).filter(f => f))].slice(0, 5)};
+    return {nombre: c, cantidad: ps.length, foto: ps.map(fotoDeProducto).find(f => f) || ''};
   }).filter(c => c.cantidad > 0);
   const totalDisponibles = listaProductos.filter(p => medidasDisponiblesDe(p).length > 0).length;
   const busq = normalizarHeader(search.trim());
@@ -1541,12 +1535,9 @@ function App(){
         <section className="max-w-7xl mx-auto px-4 w-full pb-6">
           <h3 className="font-heading font-bold text-lg text-stone-800 mb-3">Comprá por categoría</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {(verTodasCat ? infoCategorias : infoCategorias.slice(0, 8)).map((c, i) => (
+            {(verTodasCat ? infoCategorias : infoCategorias.slice(0, 8)).map(c => (
               <button key={c.nombre} onClick={() => elegirCategoria(c.nombre)} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-brand-100 text-left group shadow-sm">
-                {tickCat > 0 && c.fotos.length > 1 && (
-                  <img src={c.fotos[(tickCat + i - 1) % c.fotos.length]} onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover" alt=""/>
-                )}
-                <img key={tickCat + '-' + i} src={c.fotos.length ? c.fotos[(tickCat + i) % c.fotos.length] : IMG_PLACEHOLDER} loading="lazy" onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover animate-fade-in" alt=""/>
+                <img src={c.foto || IMG_PLACEHOLDER} loading="lazy" onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500" alt=""/>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <p className="text-white font-heading font-semibold text-sm leading-tight line-clamp-2">{c.nombre}</p>
