@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { db } from './firebase.js';
-
+import React, { useState, useEffect, useRef } from 'react';
+import { db } from './firebase';
 const NOMBRE_NEGOCIO = "Blanquería MyA";
 // Imagen de respaldo cuando un producto/medida todavía no tiene foto cargada.
 // Es un SVG embebido (no depende de ningún servicio externo, así nunca se ve "rota").
@@ -78,6 +77,16 @@ function App(){
   const [clientes, setClientes] = useState({});
   const [bannerProductos, setBannerProductos] = useState([]);
   const [bannerIndice, setBannerIndice] = useState(0);
+  const [verTodasCat, setVerTodasCat] = useState(false);
+  const headerRef = useRef(null);
+  const [headerH, setHeaderH] = useState(96);
+  useEffect(() => {
+    const medir = () => { if(headerRef.current) setHeaderH(headerRef.current.offsetHeight); };
+    medir();
+    window.addEventListener('resize', medir);
+    const t = setTimeout(medir, 800);
+    return () => { window.removeEventListener('resize', medir); clearTimeout(t); };
+  }, []);
   
   // UI State
   const [categoria, setCategoria] = useState('Todos');
@@ -341,6 +350,18 @@ function App(){
     return matchCat && matchSearch && matchMedida && tieneStock;
   });
 
+  const fotoDeProducto = p => imagenesDe(p)[0] || ((medidasDe(p).find(m => m.imagenes && m.imagenes.length) || {imagenes:[]}).imagenes[0]) || '';
+  // Solo categorías con productos en stock (y sin la de "sin categorizar"), con cantidad y foto
+  const infoCategorias = categorias.filter(c => !c.includes('Sin categorizar')).map(c => {
+    const ps = listaProductos.filter(p => p.categoria === c && medidasDisponiblesDe(p).length > 0);
+    return {nombre: c, cantidad: ps.length, foto: ps.map(fotoDeProducto).find(f => f) || ''};
+  }).filter(c => c.cantidad > 0);
+  const totalDisponibles = listaProductos.filter(p => medidasDisponiblesDe(p).length > 0).length;
+  const busq = normalizarHeader(search.trim());
+  const sugCategorias = busq.length >= 2 ? infoCategorias.filter(c => normalizarHeader(c.nombre).includes(busq)).slice(0,5) : [];
+  const sugProductos = busq.length >= 2 ? listaProductos.filter(p => medidasDisponiblesDe(p).length > 0 && normalizarHeader(p.nombre).includes(busq)).slice(0,4) : [];
+  function irACatalogo(){ setTimeout(() => { const el = document.getElementById('catalogo'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 60); }
+  function elegirCategoria(c){ setCategoria(c); setSearch(''); irACatalogo(); }
   const productosDestacados = listaProductos.filter(p => p.destacado && medidasDisponiblesDe(p).length > 0);
 
   // Banner rotativo: elige un puñado aleatorio de productos disponibles una vez por visita
@@ -409,7 +430,7 @@ function App(){
       tieneGeneral: imagenesDe(p).length > 0,
       variantesFaltantes: medidasDisponiblesDe(p).filter(m => !(m.imagenes && m.imagenes.length))
     }))
-    .filter(x => !x.tieneGeneral && x.variantesFaltantes.length > 0);
+    .filter(x => x.variantesFaltantes.length > 0);
 
   function intentarLogin(){
     if(usuario === 'Guada' && contrasena === 'lupe'){
@@ -1130,6 +1151,12 @@ function App(){
     });
   }
 
+  function moverCategoria(c, dir){
+    const i = categorias.indexOf(c), j = i + dir;
+    if(i < 0 || j < 0 || j >= categorias.length) return;
+    const arr = [...categorias]; [arr[i], arr[j]] = [arr[j], arr[i]];
+    db.ref('categorias').set(arr).catch(err => alert('No se pudo reordenar: ' + err.message));
+  }
   function agregarCategoria(){
     if(!nuevaCategoria || categorias.includes(nuevaCategoria)) return;
     db.ref('categorias').set([...categorias, nuevaCategoria])
@@ -1332,7 +1359,7 @@ function App(){
       )}
 
       {/* HEADER / NAVBAR */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-stone-200/60 shadow-sm transition-all duration-300">
+      <header ref={headerRef} className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-stone-200/60 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex justify-between items-center gap-3">
 
@@ -1462,6 +1489,35 @@ function App(){
             </div>
           </div>
 
+          {(sugCategorias.length > 0 || sugProductos.length > 0) && (
+            <div className="max-w-xl mx-auto bg-white border border-stone-200 rounded-2xl shadow-lg p-3 text-left space-y-2">
+              {sugCategorias.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">Categorías</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sugCategorias.map(c => (
+                      <button key={c.nombre} onClick={() => elegirCategoria(c.nombre)} className="px-3 py-1.5 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold hover:bg-brand-100">
+                        {c.nombre} <span className="opacity-60">({c.cantidad})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sugProductos.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">Productos</p>
+                  {sugProductos.map(pr => (
+                    <button key={pr.id} onClick={() => { abrirProducto(pr); setSearch(''); }} className="w-full flex items-center gap-2.5 py-1.5 text-left hover:bg-stone-50 rounded-lg">
+                      <img src={fotoDeProducto(pr) || IMG_PLACEHOLDER} onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="w-9 h-9 rounded-lg object-cover bg-stone-100" alt=""/>
+                      <span className="text-xs text-stone-700 font-medium truncate">{pr.nombre}</span>
+                      <span className="text-[10px] text-stone-400 ml-auto whitespace-nowrap">{pr.categoria}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Badges distintivos */}
           <div className="flex flex-wrap justify-center items-center gap-4 text-[11px] text-stone-500 pt-2 font-medium">
             <span className="flex items-center gap-1.5"><i className="fa-solid fa-truck-fast text-brand-500"></i> Envíos a todo el país</span>
@@ -1473,6 +1529,30 @@ function App(){
 
         </div>
       </section>
+
+      {/* COMPRÁ POR CATEGORÍA (tiles con foto) */}
+      {categoria === 'Todos' && !search && infoCategorias.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 w-full pb-6">
+          <h3 className="font-heading font-bold text-lg text-stone-800 mb-3">Comprá por categoría</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {(verTodasCat ? infoCategorias : infoCategorias.slice(0, 8)).map(c => (
+              <button key={c.nombre} onClick={() => elegirCategoria(c.nombre)} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-brand-100 text-left group shadow-sm">
+                <img src={c.foto || IMG_PLACEHOLDER} loading="lazy" onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500" alt=""/>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <p className="text-white font-heading font-semibold text-sm leading-tight line-clamp-2">{c.nombre}</p>
+                  <p className="text-white/80 text-[11px] mt-0.5">{c.cantidad} {c.cantidad === 1 ? 'producto' : 'productos'}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          {infoCategorias.length > 8 && (
+            <button onClick={() => setVerTodasCat(v => !v)} className="mt-3 mx-auto block px-5 py-2 rounded-full border border-stone-200 bg-white text-xs font-semibold text-stone-600 hover:bg-stone-50">
+              {verTodasCat ? 'Ver menos' : `Ver todas las categorías (${infoCategorias.length})`}
+            </button>
+          )}
+        </section>
+      )}
 
       {/* BANNER ROTATIVO DE PRODUCTOS ALEATORIOS (destacado, grande) */}
       {bannerProductos.length > 0 && (() => {
@@ -1512,25 +1592,29 @@ function App(){
 
       <div className="trama-textil"></div>
 
-      {/* CATEGORÍAS & FILTROS */}
-      <section className="max-w-7xl mx-auto px-4 w-full mb-6">
-        
-        {/* Pills de Categorías */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
-          {['Todos', ...categorias].map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategoria(cat)}
-              className={`px-5 py-2.5 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-300 ${
-                categoria === cat
-                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 scale-105'
-                  : 'bg-white/80 text-stone-600 border border-stone-200/70 hover:border-brand-300 hover:bg-brand-50/50'
-              }`}>
-              {cat}
-            </button>
-          ))}
+      <div className="flex-1 flex flex-col">
+      {/* CATEGORÍAS (barra fija al scrollear) */}
+      <section id="catalogo" className="sticky z-30 w-full bg-white/90 backdrop-blur-md border-b border-stone-200/60 mb-3" style={{top: headerH}}>
+        <div className="max-w-7xl mx-auto px-4 relative">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2.5 pr-8">
+            {[{nombre:'Todos', cantidad: totalDisponibles}, ...infoCategorias].map(c => (
+              <button
+                key={c.nombre}
+                onClick={() => { setCategoria(c.nombre); irACatalogo(); }}
+                className={`px-4 py-2 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-300 ${
+                  categoria === c.nombre
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                    : 'bg-white text-stone-600 border border-stone-200/70 hover:border-brand-300 hover:bg-brand-50/50'
+                }`}>
+                {c.nombre} <span className="opacity-60 font-medium">{c.cantidad}</span>
+              </button>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent"></div>
         </div>
+      </section>
 
+      <section className="max-w-7xl mx-auto px-4 w-full mb-4">
         {/* Filtro secundario por Medida */}
         {medidasFiltroPublico.length > 0 && (
           <div className="flex items-center gap-2 pt-2 overflow-x-auto no-scrollbar text-xs">
@@ -1671,6 +1755,7 @@ function App(){
           </div>
         )}
       </main>
+      </div>
             {/* FOOTER MODERNIZADO */}
       <footer className="mt-auto bg-white border-t border-stone-200/80 py-8 px-4 text-center">
         <div className="max-w-5xl mx-auto space-y-4">
@@ -1923,15 +2008,25 @@ function App(){
                   <div className="space-y-2 border-t border-stone-100 pt-3">
                     <p className="text-xs font-bold text-stone-700">3. Elegí el {etiqueta}</p>
                     <div className="flex flex-wrap gap-2">
-                      {coloresDeMedida.map(col => (
+                      {coloresDeMedida.map(col => {
+                        const esReal = esColorReal(col);
+                        const varColor = variantesDeMedida.find(v => v.color === col);
+                        const miniFoto = (varColor && varColor.imagenes && varColor.imagenes.length) ? varColor.imagenes[0] : null;
+                        return (
                         <button key={col} onClick={() => { setModalColorSel(col); setIndiceImagen(0); }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition ${
                             modalColorSel === col ? 'bg-brand-50 border-brand-500 text-brand-800' : 'bg-white border-stone-200 text-stone-700 hover:border-brand-300'
                           }`}>
-                          {esColorReal(col) && codigoDeColor(col) && <span className="w-3.5 h-3.5 rounded-full border border-stone-300 flex-shrink-0" style={{backgroundColor: codigoDeColor(col)}}></span>}
+                          {esReal && codigoDeColor(col) && <span className="w-3.5 h-3.5 rounded-full border border-stone-300 flex-shrink-0" style={{backgroundColor: codigoDeColor(col)}}></span>}
+                          {!esReal && (
+                            <img src={miniFoto || imagenesDe(productoVisto)[0] || IMG_PLACEHOLDER}
+                              onError={e => { e.target.onerror=null; e.target.src=IMG_PLACEHOLDER; }}
+                              className="w-7 h-7 rounded-lg object-cover border border-stone-200 flex-shrink-0"/>
+                          )}
                           {col}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                   );
@@ -2436,9 +2531,12 @@ function App(){
                     <button onClick={agregarCategoria} className="bg-brand-600 text-white px-4 rounded-xl text-xs font-bold hover:bg-brand-700">Agregar</button>
                   </div>
                   <div className="space-y-1.5">
-                    {categorias.map(c => (
-                      <div key={c} className="flex justify-between items-center border border-stone-100 p-2.5 rounded-xl text-xs">
-                        <span className="text-stone-700 font-medium">{c}</span>
+                    <p className="text-[11px] text-stone-400">Usá ▲▼ para ordenar: este es el orden en que las ve el cliente (las que no tienen stock no se muestran).</p>
+                    {categorias.map((c, i) => (
+                      <div key={c} className="flex justify-between items-center gap-2 border border-stone-100 p-2.5 rounded-xl text-xs">
+                        <span className="text-stone-700 font-medium flex-1 min-w-0 truncate">{c}</span>
+                        <button onClick={()=>moverCategoria(c,-1)} disabled={i===0} className="px-2 py-1 rounded-lg bg-stone-100 text-stone-600 disabled:opacity-30">▲</button>
+                        <button onClick={()=>moverCategoria(c,1)} disabled={i===categorias.length-1} className="px-2 py-1 rounded-lg bg-stone-100 text-stone-600 disabled:opacity-30">▼</button>
                         <button onClick={()=>eliminarCategoria(c)} className="text-rose-500 font-semibold">Borrar</button>
                       </div>
                     ))}
@@ -2638,19 +2736,22 @@ function App(){
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
                     <h3 className="font-bold text-xs uppercase tracking-wider text-amber-800">📷 Productos sin foto</h3>
                     <p className="text-[11px] text-amber-900 leading-relaxed">
-                      Esta lista se arma sola con lo que hay cargado ahora mismo: son los productos (o medidas/colores puntuales) que todavía no tienen ninguna foto propia ni una foto general que los cubra. Un producto con al menos una foto general ya no aparece acá, aunque le falten fotos de algún color en particular.
+                      Esta lista se arma sola con lo que hay cargado ahora mismo: son las medidas/modelos/colores puntuales que todavía no tienen su propia foto. Si el producto tiene una foto general de respaldo, se aclara con la etiqueta "con foto general" — igual conviene completarlas, porque el modal y los chips de modelo muestran la foto propia de cada uno, no la general.
                     </p>
                   </div>
 
                   {productosSinFotoInfo.length === 0 ? (
-                    <p className="text-xs text-stone-400 text-center py-8">🎉 Todos los productos disponibles tienen al menos una foto.</p>
+                    <p className="text-xs text-stone-400 text-center py-8">🎉 Todas las medidas/modelos tienen su propia foto.</p>
                   ) : (
                     <div className="space-y-2">
-                      {productosSinFotoInfo.map(({p, variantesFaltantes}) => (
+                      {productosSinFotoInfo.map(({p, tieneGeneral, variantesFaltantes}) => (
                         <div key={p.id} className="bg-white border border-stone-200 rounded-2xl p-3.5">
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-xs text-stone-800">{p.nombre}</p>
-                            <span className="text-[10px] text-stone-400">{p.categoria}</span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {tieneGeneral && <span className="text-[9px] bg-stone-100 text-stone-500 border border-stone-200 rounded-full px-2 py-0.5">con foto general</span>}
+                              <span className="text-[10px] text-stone-400">{p.categoria}</span>
+                            </div>
                           </div>
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {variantesFaltantes.map((m, idx) => (
