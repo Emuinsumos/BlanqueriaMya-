@@ -81,11 +81,6 @@ function App(){
   const [tickCat, setTickCat] = useState(0);
   const headerRef = useRef(null);
   const pillsRef = useRef(null);
-  useEffect(() => {
-    if(categoria !== 'Todos' || search) return;
-    const t = setInterval(() => setTickCat(n => n + 1), 5000);
-    return () => clearInterval(t);
-  }, [categoria, search]);
   const [headerH, setHeaderH] = useState(96);
   useEffect(() => {
     const medir = () => { if(headerRef.current) setHeaderH(headerRef.current.offsetHeight); };
@@ -98,6 +93,11 @@ function App(){
   // UI State
   const [categoria, setCategoria] = useState('Todos');
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    if(categoria !== 'Todos' || search) return;
+    const t = setInterval(() => setTickCat(n => n + 1), 5000);
+    return () => clearInterval(t);
+  }, [categoria, search]);
   const [filtroMedida, setFiltroMedida] = useState('');
   const [carrito, setCarrito] = useState([]);
   const [productoVisto, setProductoVisto] = useState(null);
