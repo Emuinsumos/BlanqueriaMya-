@@ -78,7 +78,14 @@ function App(){
   const [bannerProductos, setBannerProductos] = useState([]);
   const [bannerIndice, setBannerIndice] = useState(0);
   const [verTodasCat, setVerTodasCat] = useState(false);
+  const [tickCat, setTickCat] = useState(0);
   const headerRef = useRef(null);
+  const pillsRef = useRef(null);
+  useEffect(() => {
+    if(categoria !== 'Todos' || search) return;
+    const t = setInterval(() => setTickCat(n => n + 1), 5000);
+    return () => clearInterval(t);
+  }, [categoria, search]);
   const [headerH, setHeaderH] = useState(96);
   useEffect(() => {
     const medir = () => { if(headerRef.current) setHeaderH(headerRef.current.offsetHeight); };
@@ -354,13 +361,19 @@ function App(){
   // Solo categorías con productos en stock (y sin la de "sin categorizar"), con cantidad y foto
   const infoCategorias = categorias.filter(c => !c.includes('Sin categorizar')).map(c => {
     const ps = listaProductos.filter(p => p.categoria === c && medidasDisponiblesDe(p).length > 0);
-    return {nombre: c, cantidad: ps.length, foto: ps.map(fotoDeProducto).find(f => f) || ''};
+    return {nombre: c, cantidad: ps.length, fotos: [...new Set(ps.map(fotoDeProducto).filter(f => f))].slice(0, 5)};
   }).filter(c => c.cantidad > 0);
   const totalDisponibles = listaProductos.filter(p => medidasDisponiblesDe(p).length > 0).length;
   const busq = normalizarHeader(search.trim());
   const sugCategorias = busq.length >= 2 ? infoCategorias.filter(c => normalizarHeader(c.nombre).includes(busq)).slice(0,5) : [];
   const sugProductos = busq.length >= 2 ? listaProductos.filter(p => medidasDisponiblesDe(p).length > 0 && normalizarHeader(p.nombre).includes(busq)).slice(0,4) : [];
-  function irACatalogo(){ setTimeout(() => { const el = document.getElementById('catalogo'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 60); }
+  function irACatalogo(){
+    setTimeout(() => {
+      const el = document.getElementById('catalogo'); if(!el) return;
+      const off = (headerRef.current ? headerRef.current.offsetHeight : 0) + (pillsRef.current ? pillsRef.current.offsetHeight : 0) + 8;
+      window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - off, behavior: 'smooth'});
+    }, 60);
+  }
   function elegirCategoria(c){ setCategoria(c); setSearch(''); irACatalogo(); }
   const productosDestacados = listaProductos.filter(p => p.destacado && medidasDisponiblesDe(p).length > 0);
 
@@ -1535,9 +1548,12 @@ function App(){
         <section className="max-w-7xl mx-auto px-4 w-full pb-6">
           <h3 className="font-heading font-bold text-lg text-stone-800 mb-3">Comprá por categoría</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {(verTodasCat ? infoCategorias : infoCategorias.slice(0, 8)).map(c => (
+            {(verTodasCat ? infoCategorias : infoCategorias.slice(0, 8)).map((c, i) => (
               <button key={c.nombre} onClick={() => elegirCategoria(c.nombre)} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-brand-100 text-left group shadow-sm">
-                <img src={c.foto || IMG_PLACEHOLDER} loading="lazy" onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500" alt=""/>
+                {tickCat > 0 && c.fotos.length > 1 && (
+                  <img src={c.fotos[(tickCat + i - 1) % c.fotos.length]} onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover" alt=""/>
+                )}
+                <img key={tickCat + '-' + i} src={c.fotos.length ? c.fotos[(tickCat + i) % c.fotos.length] : IMG_PLACEHOLDER} loading="lazy" onError={e => { e.target.src = IMG_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover animate-fade-in" alt=""/>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <p className="text-white font-heading font-semibold text-sm leading-tight line-clamp-2">{c.nombre}</p>
@@ -1594,7 +1610,7 @@ function App(){
 
       <div className="flex-1 flex flex-col">
       {/* CATEGORÍAS (barra fija al scrollear) */}
-      <section id="catalogo" className="sticky z-30 w-full bg-white/90 backdrop-blur-md border-b border-stone-200/60 mb-3" style={{top: headerH}}>
+      <section ref={pillsRef} className="sticky z-30 w-full bg-white/90 backdrop-blur-md border-b border-stone-200/60 mb-3" style={{top: headerH}}>
         <div className="max-w-7xl mx-auto px-4 relative">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2.5 pr-8">
             {[{nombre:'Todos', cantidad: totalDisponibles}, ...infoCategorias].map(c => (
@@ -1641,7 +1657,7 @@ function App(){
 
       </section>
             {/* CATÁLOGO DE PRODUCTOS (GRID) */}
-      <main className="max-w-7xl mx-auto px-4 flex-1 w-full pb-16">
+      <main id="catalogo" className="max-w-7xl mx-auto px-4 flex-1 w-full pb-16">
         {cargandoProductos ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 py-6">
             {[...Array(8)].map((_,i) => (
